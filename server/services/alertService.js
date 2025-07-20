@@ -131,6 +131,24 @@ export const checkDeadlines = async () => {
   }
 };
 
+export const createAlert = async (userId, type, message, projectId = null, severity = 'medium') => {
+  try {
+    const alert = await Alert.create({
+      user_id: userId,
+      project_id: projectId,
+      type,
+      message,
+      severity,
+      triggered_at: new Date(),
+      is_read: false
+    });
+    return alert;
+  } catch (error) {
+    console.error('Create alert error:', error);
+    return null;
+  }
+};
+
 const sendDeadlineEmail = async (item, type) => {
   try {
     if (

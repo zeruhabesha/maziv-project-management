@@ -5,18 +5,20 @@ import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { fetchUsersStart } from '../../store/slices/usersSlice';
 import { updateProjectStart } from '../../store/slices/projectsSlice';
 import toast from 'react-hot-toast';
+import { Project } from '../../types';
 
 interface AssignProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  project?: any;
+  project?: Project;
 }
 
 const AssignProjectModal: React.FC<AssignProjectModalProps> = ({ isOpen, onClose, project }) => {
   const dispatch = useAppDispatch();
   const { users, loading: usersLoading } = useAppSelector(state => state.users);
-  const { loading: projectLoading } = useAppSelector(state => state.projects);
+  const { loading: projectLoading, error: projectError } = useAppSelector(state => state.projects);
   const [selectedManagerIds, setSelectedManagerIds] = useState<string[]>([]);
+  const [wasSubmitting, setWasSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -24,6 +26,18 @@ const AssignProjectModal: React.FC<AssignProjectModalProps> = ({ isOpen, onClose
       setSelectedManagerIds(project?.manager_ids?.map(String) || []);
     }
   }, [isOpen, dispatch, project]);
+
+  useEffect(() => {
+    if (wasSubmitting && !projectLoading) {
+      if (!projectError) {
+        toast.success(`Managers updated for project: ${project?.name}`);
+        onClose();
+      } else {
+        toast.error('Failed to update managers');
+      }
+      setWasSubmitting(false);
+    }
+  }, [wasSubmitting, projectLoading, projectError, onClose, project?.name]);
 
   const handleToggleManager = (userId: string) => {
     setSelectedManagerIds(prev =>
@@ -34,9 +48,8 @@ const AssignProjectModal: React.FC<AssignProjectModalProps> = ({ isOpen, onClose
   const handleAssign = () => {
     if (!project) return;
     const manager_ids = selectedManagerIds.map(id => parseInt(id, 10));
+    setWasSubmitting(true);
     dispatch(updateProjectStart({ id: project.id, data: { manager_ids } }));
-    toast.success(`Managers updated for project: ${project.name}`);
-    onClose();
   };
   
   const managers = users.filter(u => u.role === 'admin' || u.role === 'manager');

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Moon, Sun, Monitor, Bell, Shield, User, Mail, Lock, Save } from 'lucide-react';
 import { useAppSelector, useAppDispatch } from '../hooks/redux';
-import { updateUserStart } from '../store/slices/usersSlice';
+import { updateUserStart, changePasswordStart } from '../store/slices/usersSlice';
 import toast from 'react-hot-toast';
 
 const Settings: React.FC = () => {
@@ -69,9 +69,8 @@ const Settings: React.FC = () => {
       toast.error("New passwords do not match.");
       return;
     }
-    // In a real app, dispatch an action to a dedicated password change endpoint.
-    // dispatch(changePasswordStart({ ...passwordData }));
-    toast.success('Password update functionality is not yet connected to the backend.');
+    if (!user) return;
+    dispatch(changePasswordStart({ id: user.id, data: { currentPassword: passwordData.currentPassword, newPassword: passwordData.newPassword } }));
   };
 
   return (

@@ -15,8 +15,10 @@ import {
   deleteUserSuccess,
   deleteUserFailure,
 } from '../slices/usersSlice';
+import { changeUserPassword } from '../../services/api/users';
+import toast from 'react-hot-toast';
 
-function* fetchUsersSaga() {
+function* fetchUsersSaga(): Generator {
   try {
     const response = yield call(usersApi.getUsers);
     yield put(fetchUsersSuccess(response.data.data));
@@ -25,7 +27,7 @@ function* fetchUsersSaga() {
   }
 }
 
-function* createUserSaga(action: PayloadAction<any>) {
+function* createUserSaga(action: PayloadAction<any>): Generator {
   try {
     const response = yield call(usersApi.createUser, action.payload);
     yield put(createUserSuccess(response.data.data));
@@ -34,7 +36,7 @@ function* createUserSaga(action: PayloadAction<any>) {
   }
 }
 
-function* updateUserSaga(action: PayloadAction<{ id: string; data: any }>) {
+function* updateUserSaga(action: PayloadAction<{ id: string; data: any }>): Generator {
   try {
     const response = yield call(usersApi.updateUser, action.payload.id, action.payload.data);
     yield put(updateUserSuccess(response.data.data));
@@ -43,7 +45,7 @@ function* updateUserSaga(action: PayloadAction<{ id: string; data: any }>) {
   }
 }
 
-function* deleteUserSaga(action: PayloadAction<string>) {
+function* deleteUserSaga(action: PayloadAction<string>): Generator {
   try {
     yield call(usersApi.deleteUser, action.payload);
     yield put(deleteUserSuccess(action.payload));
@@ -52,9 +54,19 @@ function* deleteUserSaga(action: PayloadAction<string>) {
   }
 }
 
+function* changePasswordSaga(action: PayloadAction<{ id: string; data: { currentPassword: string; newPassword: string } }>): Generator {
+  try {
+    yield call(changeUserPassword, action.payload.id, action.payload.data);
+    toast.success('Password updated successfully');
+  } catch (error: any) {
+    toast.error(error.response?.data?.message || 'Failed to update password');
+  }
+}
+
 export default function* usersSaga() {
   yield takeEvery(fetchUsersStart.type, fetchUsersSaga);
   yield takeEvery(createUserStart.type, createUserSaga);
   yield takeEvery(updateUserStart.type, updateUserSaga);
   yield takeEvery(deleteUserStart.type, deleteUserSaga);
+  yield takeEvery('users/changePasswordStart', changePasswordSaga);
 }

@@ -30,3 +30,11 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const updateProject = (id: string, projectData: any) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    console.error('No token found in localStorage!');
+  }
+  return api.put(`/projects/${id}`, projectData);
+};

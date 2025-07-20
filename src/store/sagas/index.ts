@@ -4,6 +4,7 @@ import projectsSaga from './projectsSaga';
 import itemsSaga from './itemsSaga';
 import usersSaga from './usersSaga';
 import reportsSaga from './reportsSaga'; // Import the new saga
+import alertsSaga from './alertsSaga';
 
 export function* rootSaga() {
   yield all([
@@ -12,5 +13,6 @@ export function* rootSaga() {
     fork(itemsSaga),
     fork(usersSaga),
     fork(reportsSaga), // Add the new saga here
+    fork(alertsSaga),
   ]);
 }

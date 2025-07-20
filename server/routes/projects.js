@@ -4,9 +4,10 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import pkg from "../models/index.cjs";
-const { Project, Item, User } = pkg;
+const { Project, Item, User, Notification } = pkg;
 import { Op } from 'sequelize';
 import { createNotification, getUserNotifications } from "../services/notificationService.js";
+import { createAlert } from "../services/alertService.js";
 const router = express.Router();
 
 // Set up multer storage
@@ -117,94 +118,115 @@ router.get("/:id", async (req, res) => {
 });
 
 // Create project
-router.post("/", async (req, res) => {
-  console.log('POST /api/projects called', req.body);
-  try {
-    const projectData = req.body;
-    const project = await Project.create(projectData);
+router.post(
+  '/',
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const projectData = req.body;
+      if (req.file) {
+        projectData.file = req.file.filename;
+      }
+      // Parse manager_ids if sent as JSON string
+      if (typeof projectData.manager_ids === 'string') {
+        try {
+          projectData.manager_ids = JSON.parse(projectData.manager_ids);
+        } catch {
+          projectData.manager_ids = [];
+        }
+      }
+      const project = await Project.create(projectData);
 
-    // Notify all admins and managers
-    const notifyUsers = await User.findAll({ where: { role: ["admin", "manager"] } });
-    for (const user of notifyUsers) {
-      await createNotification(user.id, "project_created", `A new project '${project.name}' has been created.`);
-    }
+      // Notify all admins and managers
+      const notifyUsers = await User.findAll({ where: { role: ["admin", "manager"] } });
+      for (const user of notifyUsers) {
+        await createNotification(user.id, "project_created", `A new project '${project.name}' has been created.`);
+      }
 
-    res.status(201).json({
-      success: true,
-      data: project,
-    });
-  } catch (error) {
-    console.error("Create project error:", error);
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res.status(400).json({ success: false, message: "Project reference number already exists" });
+      res.status(201).json({ success: true, data: project });
+    } catch (error) {
+      res.status(500).json({ success: false, message: error.message });
     }
-    res.status(500).json({ success: false, message: "Server error" });
   }
-});
+);
 
-// Update project (add authenticateToken to get req.user)
+// Update project (admin or manager only)
 router.put("/:id", async (req, res) => {
-  console.log('PUT /api/projects/:id called', req.params, req.body);
   try {
     const { id } = req.params;
     const updates = req.body;
-
-    // Get the current project before update
+    // Ensure manager_ids is always an array of integers
+    if (updates.manager_ids && typeof updates.manager_ids === 'string') {
+      try {
+        updates.manager_ids = JSON.parse(updates.manager_ids);
+      } catch {
+        updates.manager_ids = [];
+      }
+    }
+    if (Array.isArray(updates.manager_ids)) {
+      updates.manager_ids = updates.manager_ids.map(Number);
+    }
+    // Fetch the project before update
     const projectBefore = await Project.findByPk(id);
-    const oldManagerIds = Array.isArray(projectBefore?.manager_ids) ? projectBefore.manager_ids.map(String) : [];
+    if (!projectBefore) {
+      return res.status(404).json({ success: false, message: "Project not found" });
+    }
+    const oldManagerIds = Array.isArray(projectBefore.manager_ids) ? projectBefore.manager_ids.map(String) : [];
     const newManagerIds = Array.isArray(updates.manager_ids) ? updates.manager_ids.map(String) : oldManagerIds;
-
+    // Update the project
     const [updated] = await Project.update(updates, { where: { id }, returning: true });
-
-    if (updated) {
-      const updatedProject = await Project.findByPk(id);
-
-      // Notify newly assigned managers
-      const newlyAssigned = newManagerIds.filter(mid => !oldManagerIds.includes(mid));
-      if (newlyAssigned.length > 0) {
-        const notifyUsers = await User.findAll({ where: { id: newlyAssigned } });
-        for (const user of notifyUsers) {
-          await createNotification(
-            user.id,
-            "assigned_manager",
-            `You have been assigned as a manager to project '${updatedProject.name}'.`
-          );
-        }
-        // Notify the assigner (if not already in newlyAssigned)
-        if (req.user && !newlyAssigned.includes(req.user.id.toString())) {
-          await createNotification(
-            req.user.id,
-            "assigned_manager_action",
-            `You assigned managers to project '${updatedProject.name}'.`
+    if (!updated) {
+      return res.status(404).json({ success: false, message: "Project not found after update" });
+    }
+    const updatedProject = await Project.findByPk(id);
+    // Notify and alert newly assigned managers
+    const newlyAssigned = newManagerIds.filter(mid => !oldManagerIds.includes(mid));
+    if (newlyAssigned.length > 0) {
+      const notifyUsers = await User.findAll({ where: { id: newlyAssigned } });
+      for (const user of notifyUsers) {
+        await createNotification(
+          user.id,
+          "assigned_manager",
+          `You have been assigned as a manager to project '${updatedProject.name}'.`
+        );
+        if (typeof createAlert === 'function') {
+          await createAlert(
+            user.id, // userId
+            'assignment',
+            `You have been assigned as a manager to project '${updatedProject.name}'.`,
+            updatedProject.id // projectId
           );
         }
       }
-      return res.json({ success: true, data: updatedProject });
+      // Notify the assigner (if not already in newlyAssigned)
+      if (req.user && !newlyAssigned.includes(req.user.id.toString())) {
+        await createNotification(
+          req.user.id,
+          "assigned_manager_action",
+          `You assigned managers to project '${updatedProject.name}'.`
+        );
+      }
     }
-    return res.status(404).json({ success: false, message: "Project not found" });
+    return res.json({ success: true, data: updatedProject });
   } catch (error) {
     console.error("Update project error:", error);
-    return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({ success: false, message: error.message || "Server error" });
   }
 });
 
-// Delete project
-router.delete("/:id", authorizeRoles("admin"), async (req, res) => {
-    console.log('DELETE /api/projects/:id called', req.params);
-    try {
-        const { id } = req.params;
-        const deleted = await Project.destroy({
-            where: { id }
-        });
-
-        if (deleted) {
-            return res.json({ success: true, message: "Project deleted successfully" });
-        }
-        return res.status(404).json({ success: false, message: "Project not found" });
-    } catch (error) {
-        console.error("Delete project error:", error);
-        return res.status(500).json({ success: false, message: "Server error" });
+// Delete project (admin only)
+router.delete("/:id", authenticateToken, authorizeRoles("admin"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Project.destroy({ where: { id } });
+    if (deleted) {
+      return res.json({ success: true, message: "Project deleted successfully" });
     }
+    return res.status(404).json({ success: false, message: "Project not found" });
+  } catch (error) {
+    console.error("Delete project error:", error);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 });
 
 // Upload file to a project

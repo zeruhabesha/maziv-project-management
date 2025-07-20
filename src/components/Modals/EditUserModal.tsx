@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { X, User, Mail, Shield } from 'lucide-react';
+import { X, User as UserIcon, Mail, Shield } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { updateUserStart } from '../../store/slices/usersSlice';
+import { User } from '../../types';
 
 interface EditUserModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: any;
+  user: User;
 }
 
 interface UserFormData {
@@ -19,7 +20,7 @@ interface UserFormData {
 
 const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user }) => {
   const dispatch = useAppDispatch();
-  const { loading } = useAppSelector(state => state.users);
+  const { loading, error } = useAppSelector(state => state.users);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -36,11 +37,11 @@ const EditUserModal: React.FC<EditUserModalProps> = ({ isOpen, onClose, user }) 
   }, [user, reset]);
 
   useEffect(() => {
-    if (!loading && isSubmitting) {
+    if (isSubmitting && !loading && !error) {
       setIsSubmitting(false);
       onClose();
     }
-  }, [loading, isSubmitting, onClose]);
+  }, [isSubmitting, loading, error, onClose]);
 
   const onSubmit = (data: UserFormData) => {
     setIsSubmitting(true);

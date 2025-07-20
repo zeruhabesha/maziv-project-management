@@ -9,6 +9,7 @@ import { fetchUsersStart } from '../store/slices/usersSlice';
 import toast from 'react-hot-toast';
 import EditProjectModal from '../components/Modals/EditProjectModal';
 import CreateEditItemModal from '../components/Modals/CreateEditItemModal';
+import axios from 'axios';
 
 // Helper to format currency
 const formatCurrency = (amount: number | string | undefined) => {
@@ -33,6 +34,8 @@ const ProjectDetail: React.FC = () => {
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
+  const [uploading, setUploading] = useState(false);
+  const [projectFile, setProjectFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -85,6 +88,44 @@ const ProjectDetail: React.FC = () => {
     { id: 'financials', name: 'Financials', icon: DollarSign },
   ];
   
+  const handleProjectFileUpload = async () => {
+    if (!projectFile || !currentProject) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', projectFile);
+      const token = localStorage.getItem('token');
+      await axios.post(`/api/projects/${currentProject.id}/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      toast.success('Project file uploaded');
+      dispatch(fetchProjectStart(currentProject.id)); // Refresh project
+      setProjectFile(null);
+    } catch (err) {
+      toast.error('Failed to upload project file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleProjectFileDownload = async () => {
+    if (!currentProject?.file) return;
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/projects/${currentProject.id}/download/${currentProject.file}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentProject.file;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -131,14 +172,26 @@ const ProjectDetail: React.FC = () => {
         />
       )}
       {currentProject.file && (
-        <a
-          href={`/uploads/projects/${currentProject.file}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-blue-600 underline"
-        >
-          Download Project File
-        </a>
+        <div className="flex items-center space-x-4 mt-6">
+          <button onClick={handleProjectFileDownload} className="text-blue-600 underline">Download Project File</button>
+        </div>
+      )}
+      {canEdit && (
+        <div className="flex items-center space-x-2 mt-4">
+          <input
+            type="file"
+            accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onChange={e => setProjectFile(e.target.files?.[0] || null)}
+            className="border rounded p-2"
+          />
+          <button
+            onClick={handleProjectFileUpload}
+            disabled={!projectFile || uploading}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+          >
+            {uploading ? 'Uploading...' : 'Upload Project File'}
+          </button>
+        </div>
       )}
     </div>
   );
@@ -170,14 +223,9 @@ const ItemsTab = ({ items, loading, onAddItem, onEditItem, onDeleteItem }: any) 
           <td className="p-3">{item.AssignedTo?.name || 'Unassigned'}</td><td className="p-3">{formatCurrency(Number(item.quantity) * Number(item.unit_price))}</td>
           <td className="p-3">
             {item.file ? (
-              <a
-                href={`/api/items/${item.id}/download/${item.file}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 underline"
-              >
+              <button onClick={() => handleDownload(item.id, item.file)} className="text-blue-600 underline">
                 Download
-              </a>
+              </button>
             ) : (
               <span className="text-gray-400">No file</span>
             )}
@@ -196,5 +244,19 @@ const FinancialsTab = ({ tenderValue, totalCost }: any) => (
         <StatCard title="Projected Profit" value={formatCurrency(tenderValue - totalCost)} color="text-green-600" />
     </div>
 );
+
+const handleDownload = async (itemId: string, filename: string) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`/api/items/${itemId}/download/${filename}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const blob = await response.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
 
 export default ProjectDetail;

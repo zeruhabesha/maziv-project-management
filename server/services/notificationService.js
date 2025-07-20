@@ -1,8 +1,21 @@
 import pkg from "../models/index.cjs";
 const { Notification } = pkg;
 
+export const findExistingNotification = async (user_id, type, message) => {
+  return await Notification.findOne({
+    where: {
+      user_id,
+      type,
+      message,
+      is_read: false,
+    },
+  });
+};
+
 export const createNotification = async (user_id, type, message) => {
   try {
+    const existing = await findExistingNotification(user_id, type, message);
+    if (existing) return existing;
     const notification = await Notification.create({
       user_id,
       type,

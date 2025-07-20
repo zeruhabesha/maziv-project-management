@@ -8,9 +8,11 @@ interface Alert {
   message: string;
   severity: string;
   is_read: boolean;
-  triggered_at: string;
+  triggered_at?: string;
   project_name?: string;
   item_name?: string;
+  Project?: { name?: string };
+  Item?: { name?: string };
 }
 
 interface AlertsState {
@@ -31,7 +33,7 @@ const alertsSlice = createSlice({
   name: 'alerts',
   initialState,
   reducers: {
-    fetchAlertsStart: (state) => {
+    fetchAlertsStart: (state, action: PayloadAction<string>) => {
       console.log('fetchAlertsStart action dispatched');
       state.loading = true;
       state.error = null;

@@ -4,19 +4,24 @@ import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { logout } from '../../store/slices/authSlice';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { fetchNotificationsStart } from '../../store/slices/notificationsSlice';
+import { fetchNotificationsStart, markNotificationRead } from '../../store/slices/notificationsSlice';
+import { fetchAlertsStart } from '../../store/slices/alertsSlice';
 
 const Header: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { user } = useAppSelector((state) => state.auth);
   const { notifications, unreadCount } = useAppSelector((state) => state.notifications);
+  const { alerts, unreadCount: alertsUnreadCount } = useAppSelector((state) => state.alerts);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [alertsDropdownOpen, setAlertsDropdownOpen] = useState(false);
   const bellRef = useRef<HTMLButtonElement>(null);
+  const alertsBellRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (user) {
       dispatch(fetchNotificationsStart(user.id));
+      dispatch(fetchAlertsStart(user.id));
     }
   }, [user, dispatch]);
 
@@ -25,8 +30,11 @@ const Header: React.FC = () => {
       if (bellRef.current && !bellRef.current.contains(event.target as Node)) {
         setDropdownOpen(false);
       }
+      if (alertsBellRef.current && !alertsBellRef.current.contains(event.target as Node)) {
+        setAlertsDropdownOpen(false);
+      }
     }
-    if (dropdownOpen) {
+    if (dropdownOpen || alertsDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     } else {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -34,7 +42,7 @@ const Header: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [dropdownOpen]);
+  }, [dropdownOpen, alertsDropdownOpen]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -51,6 +59,35 @@ const Header: React.FC = () => {
         <div />
 
         <div className="flex items-center space-x-4">
+          {/* Alerts Bell */}
+          <button
+            ref={alertsBellRef}
+            className="relative p-2 text-gray-400 hover:text-gray-500 rounded-lg hover:bg-gray-100"
+            onClick={() => setAlertsDropdownOpen((open) => !open)}
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            {alertsUnreadCount > 0 && (
+              <span className="absolute top-1 right-1 h-2.5 w-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+            )}
+            {alertsDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-96 bg-white shadow-lg rounded-lg z-50">
+                {alerts.length === 0 ? (
+                  <div className="p-4 text-gray-500">No alerts</div>
+                ) : (
+                  alerts.map(a => (
+                    <div key={a.id} className={`p-3 border-b ${!a.is_read ? 'bg-yellow-50' : ''}`}>
+                      <div className="font-medium">{a.message}</div>
+                      <div className="text-xs text-gray-400">
+                        {a.Project?.name ? `Project: ${a.Project.name}` : ''} 
+                        {a.Item?.name ? ` Item: ${a.Item.name}` : ''} 
+                        {a.triggered_at ? new Date(a.triggered_at).toLocaleString() : ''}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </button>
           <button
             ref={bellRef}
             className="relative p-2 text-gray-400 hover:text-gray-500 rounded-lg hover:bg-gray-100"
@@ -66,7 +103,9 @@ const Header: React.FC = () => {
                   <div className="p-4 text-gray-500">No notifications</div>
                 ) : (
                   notifications.map(n => (
-                    <div key={n.id} className={`p-3 border-b ${!n.is_read ? 'bg-blue-50' : ''}`}>
+                    <div key={n.id} className={`p-3 border-b ${!n.is_read ? 'bg-blue-50' : ''} cursor-pointer`}
+                      onClick={() => dispatch(markNotificationRead(n.id))}
+                    >
                       <div className="font-medium">{n.message}</div>
                       <div className="text-xs text-gray-400">{new Date(n.createdAt).toLocaleString()}</div>
                     </div>

@@ -78,6 +78,10 @@ const usersSlice = createSlice({
     clearError: (state) => {
       state.error = null;
     },
+    changePasswordStart: (state, action: PayloadAction<{ id: string; data: any }>) => {
+      state.loading = true;
+      state.error = null;
+    },
   },
 });
 
@@ -95,6 +99,7 @@ export const {
   deleteUserSuccess,
   deleteUserFailure,
   clearError,
+  changePasswordStart,
 } = usersSlice.actions;
 
 export default usersSlice.reducer;

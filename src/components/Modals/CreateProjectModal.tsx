@@ -6,6 +6,8 @@ import { useAppDispatch } from '../../hooks/redux';
 import { createProjectStart } from '../../store/slices/projectsSlice';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import projectRoutes from './routes/projects.js';
+import { app } from '../App';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -38,31 +40,33 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
   const [file, setFile] = React.useState<File | null>(null);
 
   const onSubmit = async (data: ProjectFormData) => {
-    // Convert tender_value to number and manager_ids to array
-    const projectData = {
-      ...data,
-      tender_value: Number(data.tender_value),
-      manager_ids: data.manager_ids || [],
-      status: 'planning',
-    };
+    const formData = new FormData();
+    formData.append('name', data.name);
+    formData.append('ref_no', data.ref_no);
+    formData.append('client', data.client);
+    formData.append('description', data.description);
+    formData.append('start_date', data.start_date);
+    formData.append('end_date', data.end_date);
+    formData.append('tender_value', String(data.tender_value));
+    formData.append('manager_ids', JSON.stringify(data.manager_ids || []));
+    formData.append('status', 'planning');
+    if (file) formData.append('file', file);
 
     try {
-      const result = await dispatch(createProjectStart(projectData));
-      // If file is selected and project created successfully
-      if (file && result?.payload?.id) {
-        const formData = new FormData();
-        formData.append('file', file);
-        await axios.post(`/api/projects/${result.payload.id}/upload`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        toast.success('File uploaded successfully');
-      }
+      const token = localStorage.getItem('token');
+      const response = await axios.post('/api/projects', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${token}`,
+        },
+      });
       toast.success('Project created successfully');
       reset();
       setFile(null);
       onClose();
+      // Optionally, refresh project list
     } catch (err) {
-      toast.error('Failed to create project or upload file');
+      toast.error('Failed to create project');
     }
   };
 

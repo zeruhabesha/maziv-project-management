@@ -5,13 +5,14 @@ import { X, Package, DollarSign, Users, Calendar } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { createItemStart, updateItemStart } from '../../store/slices/itemsSlice';
 import toast from 'react-hot-toast';
+import { Item, User } from '../../types';
 
 interface CreateEditItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  item?: any; // The item to edit, if any
+  item?: Item; // The item to edit, if any
   projectId: string;
-  users: any[]; // List of users for assignment
+  users: User[]; // List of users for assignment
 }
 
 interface ItemFormData {
@@ -27,8 +28,9 @@ interface ItemFormData {
 
 const CreateEditItemModal: React.FC<CreateEditItemModalProps> = ({ isOpen, onClose, item, projectId, users }) => {
   const dispatch = useAppDispatch();
-  const { loading, error } = useAppSelector(state => state.items);
+  const { loading, error, items } = useAppSelector(state => state.items);
   const isEditing = !!item;
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
@@ -64,6 +66,7 @@ const CreateEditItemModal: React.FC<CreateEditItemModalProps> = ({ isOpen, onClo
   }, [error]);
 
   const onSubmit = (data: ItemFormData) => {
+    setIsSubmitting(true);
     const payload = {
       ...data,
       project_id: projectId,
@@ -90,8 +93,14 @@ const CreateEditItemModal: React.FC<CreateEditItemModalProps> = ({ isOpen, onClo
       dispatch(createItemStart(formData));
     }
     // The saga will handle toasts and state updates
-    if (!loading) onClose(); // Close optimistically
   };
+
+  useEffect(() => {
+    if (isSubmitting && !loading && !error) {
+      setIsSubmitting(false);
+      onClose();
+    }
+  }, [isSubmitting, loading, error, onClose]);
 
   if (!isOpen) return null;
 

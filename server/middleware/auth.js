@@ -16,6 +16,12 @@ export const authenticateToken = async (req, res, next) => {
   }
 
   try {
+    console.log("---- AUTH DEBUG ----");
+    console.log("Auth header:", req.headers["authorization"]);
+    console.log("JWT Secret (middleware):", process.env.JWT_SECRET || "your_jwt_secret");
+    console.log("Server time (epoch):", Math.floor(Date.now() / 1000));
+    console.log("--------------------");
+
     const jwtSecret = process.env.JWT_SECRET || "your_jwt_secret";
     const decoded = jwt.verify(token, jwtSecret);
 
@@ -28,10 +34,12 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     req.user = user;
-    console.log('Authenticated user:', req.user);
+    console.log("Authenticated user:", req.user);
     next();
   } catch (error) {
     console.error("Invalid token:", error.message);
+    console.log("Auth header:", req.headers["authorization"]);
+    console.log("Token:", token);
     return res.status(403).json({ message: "Invalid token" });
   }
 };

@@ -20,7 +20,7 @@ interface UserFormData {
 
 const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) => {
   const dispatch = useAppDispatch();
-  const { loading } = useAppSelector(state => state.users);
+  const { loading, users, error } = useAppSelector(state => state.users);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -34,12 +34,12 @@ const CreateUserModal: React.FC<CreateUserModalProps> = ({ isOpen, onClose }) =>
   const password = watch('password');
 
   useEffect(() => {
-    if (!isOpen || (!loading && isSubmitting)) {
+    if (isSubmitting && !loading && !error) {
       reset();
       setIsSubmitting(false);
-      if(!loading && isSubmitting) onClose();
+      onClose();
     }
-  }, [isOpen, loading, isSubmitting, reset, onClose]);
+  }, [isSubmitting, loading, error, reset, onClose]);
 
   const onSubmit = (data: UserFormData) => {
     const { confirmPassword, ...userData } = data;

@@ -2,7 +2,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import { authorizeRoles } from "../middleware/auth.js";
 import pkg from "../models/index.cjs";
-const { Project, Item, User } = pkg;
+const { Project, Item, User, Alert } = pkg;
 import { createNotification, getUserNotifications, markNotificationRead } from "../services/notificationService.js";
 import { authenticateToken } from "../middleware/auth.js";
 const router = express.Router();
@@ -117,6 +117,48 @@ router.post("/notifications/:notificationId/read", async (req, res) => {
         console.error("Mark notification read error:", error);
         res.status(500).json({ success: false, message: "Server error" });
     }
+});
+
+// Get alerts for a project
+router.get('/:id/alerts', async (req, res) => {
+  try {
+    const { project_id } = req.query;
+    if (!project_id) {
+      return res.status(400).json({ success: false, message: 'project_id query param is required' });
+    }
+    // Fetch alerts for this user and project
+    const alerts = await Alert.findAll({ where: { user_id: req.params.id, project_id } });
+    res.json({ success: true, data: alerts });
+  } catch (error) {
+    console.error('Get project alerts error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// Change password for user
+router.put('/:id/password', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentPassword, newPassword } = req.body;
+    if (!req.user || req.user.id.toString() !== id) {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+    const user = await User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    const bcrypt = require('bcryptjs');
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    }
+    user.password = await bcrypt.hash(newPassword, 10);
+    await user.save();
+    res.json({ success: true, message: 'Password updated successfully' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
 });
 
 export default router;

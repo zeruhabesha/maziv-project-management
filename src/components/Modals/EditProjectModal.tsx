@@ -4,11 +4,12 @@ import { useForm } from 'react-hook-form';
 import { X, FolderOpen, Calendar, DollarSign, User } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { updateProjectStart } from '../../store/slices/projectsSlice';
+import { Project } from '../../types';
 
 interface EditProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  project: any;
+  project: Project;
 }
 
 interface ProjectFormData {
@@ -24,7 +25,7 @@ interface ProjectFormData {
 
 const EditProjectModal: React.FC<EditProjectModalProps> = ({ isOpen, onClose, project }) => {
   const dispatch = useAppDispatch();
-  const { loading } = useAppSelector(state => state.projects);
+  const { loading, error } = useAppSelector(state => state.projects);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -44,12 +45,11 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({ isOpen, onClose, pr
   }, [project, reset]);
 
   useEffect(() => {
-    // Auto-close modal on successful submission
-    if (!loading && isSubmitting) {
+    if (isSubmitting && !loading && !error) {
       setIsSubmitting(false);
       onClose();
     }
-  }, [loading, isSubmitting, onClose]);
+  }, [isSubmitting, loading, error, onClose]);
 
   const onSubmit = (data: ProjectFormData) => {
     const projectData = {

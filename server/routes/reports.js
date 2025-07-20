@@ -8,15 +8,16 @@ console.log('Project:', Project);
 console.log('Item:', Item);
 console.log('Alert:', Alert);
 
-router.get("/projects/:id/progress", async (req, res) => {
+router.get("/reports/projects/:id/progress", async (req, res) => {
   const { id } = req.params;
-  const project = await Project.findByPk(id, {
-    include: [{ model: Item, as: "Items" }]
-  });
+  const project = await Project.findByPk(id, { include: [{ model: Item, as: "Items" }] });
   if (!project) return res.status(404).json({ success: false, message: "Project not found" });
 
   const totalItems = project.Items.length;
   const completedItems = project.Items.filter(i => i.status === "completed").length;
+  const inProgressItems = project.Items.filter(i => i.status === "in_progress").length;
+  const pendingItems = project.Items.filter(i => i.status === "pending").length;
+  const overdueItems = project.Items.filter(i => i.deadline < new Date() && i.status !== "completed").length;
   const progress = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
 
   res.json({
@@ -25,8 +26,10 @@ router.get("/projects/:id/progress", async (req, res) => {
       project_name: project.name,
       total_items: totalItems,
       completed_items: completedItems,
+      in_progress_items: inProgressItems,
+      pending_items: pendingItems,
+      overdue_items: overdueItems,
       progress_percentage: progress,
-      // ...other stats
     }
   });
 });

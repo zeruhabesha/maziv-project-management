@@ -114,6 +114,7 @@ const Projects: React.FC = () => {
       {error && <p className="text-center p-4 text-red-500">{error}</p>}
       
       {!loading && projects.length > 0 && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {projects.map((project, index) => (
             <motion.div key={project.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}
@@ -170,6 +171,32 @@ const Projects: React.FC = () => {
             </motion.div>
           ))}
         </div>
+        {/* Pagination Controls */}
+        {pagination.pages > 1 && (
+          <div className="flex justify-center mt-8">
+            <nav className="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              <button
+                className="px-3 py-2 rounded-l-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-100"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >Prev</button>
+              {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  className={`px-3 py-2 border-t border-b border-gray-300 bg-white text-gray-700 hover:bg-gray-100 ${currentPage === page ? 'font-bold bg-blue-50 text-blue-600' : ''}`}
+                  onClick={() => setCurrentPage(page)}
+                  disabled={currentPage === page}
+                >{page}</button>
+              ))}
+              <button
+                className="px-3 py-2 rounded-r-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-100"
+                onClick={() => setCurrentPage((p) => Math.min(pagination.pages, p + 1))}
+                disabled={currentPage === pagination.pages}
+              >Next</button>
+            </nav>
+          </div>
+        )}
+        </>
       )}
       
       {!loading && projects.length === 0 && (
