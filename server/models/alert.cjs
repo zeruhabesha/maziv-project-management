@@ -18,17 +18,13 @@ module.exports = (sequelize, DataTypes) => {
   Alert.init({
     item_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      validate: {
-        notNull: { msg: 'Item ID cannot be null' }
-      }
+      allowNull: true, // Allow null for user-specific alerts
+      references: { model: 'Item', key: 'id' }
     },
     project_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
-      validate: {
-        notNull: { msg: 'Project ID cannot be null' }
-      }
+      allowNull: true, // Allow null for general alerts
+      references: { model: 'Project', key: 'id' }
     },
     type: {
       type: DataTypes.STRING,
@@ -60,7 +56,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     user_id: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
+      references: { model: 'User', key: 'id' }
     }
   }, {
     sequelize,

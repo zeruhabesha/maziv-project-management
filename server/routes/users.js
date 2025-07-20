@@ -1,5 +1,6 @@
 import express from "express";
 import bcrypt from "bcryptjs";
+import { Op } from "sequelize";
 import { authorizeRoles } from "../middleware/auth.js";
 import pkg from "../models/index.cjs";
 const { Project, Item, User, Alert } = pkg;
@@ -122,15 +123,15 @@ router.post("/notifications/:notificationId/read", async (req, res) => {
 // Get alerts for a project
 router.get('/:id/alerts', async (req, res) => {
   try {
+    const userId = req.params.id;
     const { project_id } = req.query;
     if (!project_id) {
       return res.status(400).json({ success: false, message: 'project_id query param is required' });
     }
-    // Fetch alerts for this user and project
-    const alerts = await Alert.findAll({ where: { user_id: req.params.id, project_id } });
+    const alerts = await Alert.findAll({ where: { user_id: userId, project_id } });
     res.json({ success: true, data: alerts });
   } catch (error) {
-    console.error('Get project alerts error:', error);
+    console.error('Get user alerts error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 });

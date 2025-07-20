@@ -51,7 +51,11 @@ const CreateEditItemModal: React.FC<CreateEditItemModalProps> = ({ isOpen, onClo
     if (item) {
       // If editing, populate form with item data
       const deadline = item.deadline ? new Date(item.deadline).toISOString().split('T')[0] : '';
-      reset({ ...item, deadline });
+      reset({
+        ...item,
+        assigned_to: item.assigned_to ? Number(item.assigned_to) : undefined,
+        deadline,
+      });
     } else {
       // If creating, reset to default values
       reset({
@@ -72,7 +76,7 @@ const CreateEditItemModal: React.FC<CreateEditItemModalProps> = ({ isOpen, onClo
       project_id: projectId,
       quantity: Number(data.quantity),
       unit_price: Number(data.unit_price),
-      assigned_to: data.assigned_to ? Number(data.assigned_to) : null,
+      assigned_to: typeof data.assigned_to === 'number' ? data.assigned_to : null,
     };
 
     const formData = new FormData();
@@ -83,7 +87,7 @@ const CreateEditItemModal: React.FC<CreateEditItemModalProps> = ({ isOpen, onClo
     formData.append('status', data.status);
     formData.append('quantity', data.quantity.toString());
     formData.append('unit_price', data.unit_price.toString());
-    formData.append('assigned_to', data.assigned_to ? data.assigned_to.toString() : '');
+    formData.append('assigned_to', typeof data.assigned_to === 'number' ? data.assigned_to.toString() : '');
     formData.append('deadline', data.deadline || '');
     formData.append('description', data.description || '');
 

@@ -33,7 +33,7 @@ const alertsSlice = createSlice({
   name: 'alerts',
   initialState,
   reducers: {
-    fetchAlertsStart: (state, action: PayloadAction<string>) => {
+    fetchAlertsStart: (state, action: PayloadAction<{ userId: string; projectId?: string }>) => {
       console.log('fetchAlertsStart action dispatched');
       state.loading = true;
       state.error = null;

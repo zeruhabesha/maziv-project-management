@@ -4,10 +4,6 @@ import { Op } from 'sequelize';
 const { Project, Item, Phase, Alert } = db;
 const router = express.Router();
 
-console.log('Project:', Project);
-console.log('Item:', Item);
-console.log('Alert:', Alert);
-
 router.get("/reports/projects/:id/progress", async (req, res) => {
   const { id } = req.params;
   const project = await Project.findByPk(id, { include: [{ model: Item, as: "Items" }] });
@@ -105,13 +101,13 @@ router.get("/projects/:id/cost", async (req, res) => {
 
 // Get dashboard overview
 router.get("/dashboard", async (req, res) => {
-    console.log('DEBUG Project:', Project);
-    console.log('DEBUG Item:', Item);
-    console.log('DEBUG Alert:', Alert);
-    if (!Project) return res.status(500).json({ success: false, message: 'Project model is undefined' });
-    if (!Item) return res.status(500).json({ success: false, message: 'Item model is undefined' });
-    if (!Alert) return res.status(500).json({ success: false, message: 'Alert model is undefined' });
     try {
+        // Check if models are properly loaded
+        if (!Project || !Item || !Alert) {
+            console.error('Models not properly loaded:', { Project: !!Project, Item: !!Item, Alert: !!Alert });
+            return res.status(500).json({ success: false, message: 'Database models not available' });
+        }
+
         // Get project statistics
         const projects = await Project.findAll();
         const total_projects = projects.length;
@@ -134,8 +130,8 @@ router.get("/dashboard", async (req, res) => {
             limit: 10,
             order: [['triggered_at', 'DESC']],
             include: [
-                { model: Project, as: 'Project' },
-                { model: Item, as: 'Item' }
+                { model: Project, as: 'Project', required: false },
+                { model: Item, as: 'Item', required: false }
             ]
         });
 
@@ -159,8 +155,17 @@ router.get("/dashboard", async (req, res) => {
         });
     } catch (error) {
         console.error("Get dashboard overview error:", error);
-        if (error.stack) console.error(error.stack);
-        res.status(500).json({ success: false, message: "Server error", error: error.message, stack: error.stack });
+        console.error("Error details:", {
+            message: error.message,
+            name: error.name,
+            sql: error.sql,
+            original: error.original
+        });
+        res.status(500).json({ 
+            success: false, 
+            message: "Server error", 
+            error: error.message 
+        });
     }
 });
 

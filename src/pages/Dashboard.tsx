@@ -5,18 +5,24 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { fetchDashboardStart } from '../store/slices/reportsSlice';
 import { fetchProjectsStart } from '../store/slices/projectsSlice';
+import { fetchAlertsStart } from '../store/slices/alertsSlice';
 import { Link } from 'react-router-dom';
 
 const Dashboard: React.FC = () => {
   const dispatch = useAppDispatch();
   const { dashboard, loading: dashboardLoading } = useAppSelector((state) => state.reports);
   const { projects, loading: projectsLoading } = useAppSelector((state) => state.projects);
+  const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(fetchDashboardStart());
     // Fetch recent projects for the table
     dispatch(fetchProjectsStart({ page: 1, limit: 5 }));
-  }, [dispatch]);
+    // Fetch alerts for current user - only if user exists and has an ID
+    if (user?.id) {
+      dispatch(fetchAlertsStart({ userId: user.id }));
+    }
+  }, [dispatch, user]);
 
   // Memoize chart data to prevent re-calculation on every render
   const statusChartData = useMemo(() => {

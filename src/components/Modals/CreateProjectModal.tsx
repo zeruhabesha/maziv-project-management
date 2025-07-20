@@ -6,8 +6,6 @@ import { useAppDispatch } from '../../hooks/redux';
 import { createProjectStart } from '../../store/slices/projectsSlice';
 import toast from 'react-hot-toast';
 import axios from 'axios';
-import projectRoutes from './routes/projects.js';
-import { app } from '../App';
 
 interface CreateProjectModalProps {
   isOpen: boolean;

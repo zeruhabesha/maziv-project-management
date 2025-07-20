@@ -4,7 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import pkg from "../models/index.cjs";
-const { Project, Item, User, Notification } = pkg;
+const { Item, Supplier, User, Phase, Project } = pkg;
 import { Op } from 'sequelize';
 import { createNotification, getUserNotifications } from "../services/notificationService.js";
 import { createAlert } from "../services/alertService.js";
@@ -189,14 +189,14 @@ router.put("/:id", async (req, res) => {
           "assigned_manager",
           `You have been assigned as a manager to project '${updatedProject.name}'.`
         );
-        if (typeof createAlert === 'function') {
-          await createAlert(
-            user.id, // userId
-            'assignment',
-            `You have been assigned as a manager to project '${updatedProject.name}'.`,
-            updatedProject.id // projectId
-          );
-        }
+        const alertResult = await createAlert(
+          user.id, // userId
+          'assignment',
+          `You have been assigned as a manager to project '${updatedProject.name}'.`,
+          updatedProject.id, // projectId
+          'medium'
+        );
+        console.log('Alert creation result for user', user.id, ':', alertResult ? 'success' : 'failed');
       }
       // Notify the assigner (if not already in newlyAssigned)
       if (req.user && !newlyAssigned.includes(req.user.id.toString())) {

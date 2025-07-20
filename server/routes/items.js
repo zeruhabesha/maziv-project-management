@@ -4,7 +4,7 @@ import path from "path";
 import fs from "fs";
 import { createNotification } from "../services/notificationService.js";
 import pkg from "../models/index.cjs";
-const { Item, Supplier, Phase, User } = pkg;
+const { Item, Supplier, User, Phase, Project } = pkg;
 const router = express.Router();
 
 // Set up multer storage for item files
@@ -74,10 +74,8 @@ router.get("/", async (req, res) => {
 // Create item
 router.post("/", upload.single("file"), async (req, res) => {
     console.log('POST /api/items called', req.body);
+    console.log('Request file:', req.file);
     try {
-        // Log the incoming request body and file (if any)
-        console.log('Request body:', req.body);
-        console.log('Request file:', req.file);
         const itemData = { ...req.body };
 
         // Only set file if a file was uploaded
@@ -90,11 +88,41 @@ router.post("/", upload.single("file"), async (req, res) => {
         }
 
         // Convert empty strings to null for integer fields
-        const integerFields = ['project_id', 'phase_id', 'supplier_id', 'assigned_to', 'quantity'];
+        const integerFields = ['project_id', 'phase_id', 'supplier_id', 'assigned_to'];
         for (const field of integerFields) {
           if (itemData[field] === '') {
             itemData[field] = null;
           }
+        }
+
+        // Validate assigned_to user exists if provided
+        if (itemData.assigned_to) {
+          const user = await User.findByPk(itemData.assigned_to);
+          if (!user) {
+            return res.status(400).json({ success: false, message: "Assigned user does not exist" });
+          }
+        }
+
+        // Validate project exists
+        if (itemData.project_id) {
+          const project = await Project.findByPk(itemData.project_id);
+          if (!project) {
+            return res.status(400).json({ success: false, message: "Project does not exist" });
+          }
+        }
+
+        // Convert quantity to number, handle empty string
+        if (itemData.quantity === '' || itemData.quantity === null || itemData.quantity === undefined) {
+          itemData.quantity = 0;
+        } else {
+          itemData.quantity = Number(itemData.quantity);
+        }
+
+        // Convert unit_price to number, handle empty string
+        if (itemData.unit_price === '' || itemData.unit_price === null || itemData.unit_price === undefined) {
+          itemData.unit_price = 0;
+        } else {
+          itemData.unit_price = Number(itemData.unit_price);
         }
 
         const item = await Item.create(itemData);

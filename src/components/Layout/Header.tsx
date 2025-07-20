@@ -21,7 +21,7 @@ const Header: React.FC = () => {
   useEffect(() => {
     if (user) {
       dispatch(fetchNotificationsStart(user.id));
-      dispatch(fetchAlertsStart(user.id));
+      dispatch(fetchAlertsStart({ userId: user.id }));
     }
   }, [user, dispatch]);
 

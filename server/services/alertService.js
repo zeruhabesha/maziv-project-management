@@ -133,8 +133,11 @@ export const checkDeadlines = async () => {
 
 export const createAlert = async (userId, type, message, projectId = null, severity = 'medium') => {
   try {
+    console.log('Creating alert:', { userId, type, message, projectId, severity });
+    
     const alert = await Alert.create({
       user_id: userId,
+      item_id: null, // Set to null for user-specific alerts
       project_id: projectId,
       type,
       message,
@@ -142,6 +145,8 @@ export const createAlert = async (userId, type, message, projectId = null, sever
       triggered_at: new Date(),
       is_read: false
     });
+    
+    console.log('Alert created successfully:', alert.id);
     return alert;
   } catch (error) {
     console.error('Create alert error:', error);
