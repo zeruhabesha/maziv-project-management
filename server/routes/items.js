@@ -90,40 +90,34 @@ router.post("/", upload.single("file"), async (req, res) => {
         // Convert empty strings to null for integer fields
         const integerFields = ['project_id', 'phase_id', 'supplier_id', 'assigned_to'];
         for (const field of integerFields) {
-          if (itemData[field] === '') {
+          if (itemData[field] === '' || itemData[field] === undefined) {
             itemData[field] = null;
+          } else {
+            itemData[field] = Number(itemData[field]);
+            if (isNaN(itemData[field])) itemData[field] = null;
           }
         }
 
+        // Validate project_id
+        if (!itemData.project_id) {
+          return res.status(400).json({ success: false, message: "project_id is required and must be a valid project" });
+        }
+        const project = await Project.findByPk(itemData.project_id);
+        if (!project) {
+          return res.status(400).json({ success: false, message: "Project does not exist" });
+        }
+
         // Validate assigned_to user exists if provided
-        if (itemData.assigned_to) {
+        if (itemData.assigned_to !== null && itemData.assigned_to !== undefined) {
           const user = await User.findByPk(itemData.assigned_to);
           if (!user) {
             return res.status(400).json({ success: false, message: "Assigned user does not exist" });
           }
         }
 
-        // Validate project exists
-        if (itemData.project_id) {
-          const project = await Project.findByPk(itemData.project_id);
-          if (!project) {
-            return res.status(400).json({ success: false, message: "Project does not exist" });
-          }
-        }
-
-        // Convert quantity to number, handle empty string
-        if (itemData.quantity === '' || itemData.quantity === null || itemData.quantity === undefined) {
-          itemData.quantity = 0;
-        } else {
-          itemData.quantity = Number(itemData.quantity);
-        }
-
-        // Convert unit_price to number, handle empty string
-        if (itemData.unit_price === '' || itemData.unit_price === null || itemData.unit_price === undefined) {
-          itemData.unit_price = 0;
-        } else {
-          itemData.unit_price = Number(itemData.unit_price);
-        }
+        // Convert quantity and unit_price to numbers
+        itemData.quantity = itemData.quantity ? Number(itemData.quantity) : 0;
+        itemData.unit_price = itemData.unit_price ? Number(itemData.unit_price) : 0;
 
         const item = await Item.create(itemData);
         // Fetch the created item with associations and file field

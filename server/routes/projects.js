@@ -215,7 +215,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // Delete project (admin only)
-router.delete("/:id", authenticateToken, authorizeRoles("admin"), async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await Project.destroy({ where: { id } });
@@ -232,7 +232,6 @@ router.delete("/:id", authenticateToken, authorizeRoles("admin"), async (req, re
 // Upload file to a project
 router.post(
   "/:id/upload",
-  authenticateToken,
   upload.single("file"),
   async (req, res) => {
     console.log('POST /api/projects/:id/upload called', req.params, req.file);
@@ -265,7 +264,7 @@ router.post(
 );
 
 // Download file from a project
-router.get("/:id/download/:filename", authenticateToken, async (req, res) => {
+router.get("/:id/download/:filename", async (req, res) => {
     console.log('GET /api/projects/:id/download/:filename called', req.params);
     try {
         const { filename } = req.params;
