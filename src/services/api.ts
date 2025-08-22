@@ -3,7 +3,7 @@ import { store } from '../store'; // Ensure the path to your store is correct
 
 const api = axios.create({
   // Use VITE_ instead of REACT_APP_ for Vite projects
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'https://maziv-backend.onrender.com',
   // Removed global Content-Type header to allow FormData uploads
 });
 
