@@ -2,7 +2,7 @@
 set -e
 
 # Change to the server directory
-cd /usr/src/app/server
+cd /app/server
 
 # Install dependencies if needed
 if [ "$NODE_ENV" = "development" ]; then
