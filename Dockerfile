@@ -2,7 +2,7 @@
 FROM node:20-alpine
 
 # Set working directory
-WORKDIR /usr/src/app
+WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
@@ -20,15 +20,15 @@ ENV NODE_ENV=production
 ENV PORT=10000
 
 # Create necessary directories
-RUN mkdir -p /usr/src/app/server/uploads/items
-RUN mkdir -p /usr/src/app/server/uploads/projects
-RUN chmod -R 777 /usr/src/app/server/uploads
+RUN mkdir -p /app/server/uploads/items \
+    && mkdir -p /app/server/uploads/projects \
+    && chmod -R 777 /app/server/uploads
 
 # Build the application
 RUN npm run build
 
 # Set working directory to server
-WORKDIR /usr/src/app/server
+WORKDIR /app/server
 
 # Expose the port the app runs on
 EXPOSE 10000
