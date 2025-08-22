@@ -160,11 +160,50 @@ const startServer = async () => {
 
     process.on("SIGTERM", shutdown);
     process.on("SIGINT", shutdown);
+    return server;
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);
   }
 };
 
-// Start the application
-startServer();
+// Start the server
+const server = startServer();
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error(err.name, err.message);
+  if (server) {
+    server.close(() => {
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error(err.name, err.message);
+  if (server) {
+    server.close(() => {
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+});
+
+// Handle SIGTERM signal (for Render)
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
+  if (server) {
+    server.close(() => {
+      console.log('💥 Process terminated!');
+    });
+  } else {
+    process.exit(0);
+  }
+});
