@@ -33,7 +33,7 @@ app.use('/uploads/projects', express.static(path.join(process.cwd(), 'server', '
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: process.env.CLIENT_URL || "https://maziv-project-management.vercel.app",
     credentials: true,
   })
 );
