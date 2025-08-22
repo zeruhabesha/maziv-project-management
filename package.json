@@ -2,6 +2,10 @@
   "name": "maziv-project-management",
   "private": true,
   "version": "1.0.0",
+  "description": "Maziv Project Management - Root Workspace",
+  "workspaces": [
+    "server"
+  ],
   "scripts": {
     "dev": "concurrently \"cd server && npm run dev\" \"npm run client\"",
     "client": "vite",
