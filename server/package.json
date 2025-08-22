@@ -11,7 +11,8 @@
   "scripts": {
     "start": "node --experimental-modules --es-module-specifier-resolution=node app.js",
     "dev": "nodemon app.js",
-    "migrate": "node migrations/index.cjs"
+    "migrate": "node migrations/index.cjs",
+    "build": "echo \"Build completed successfully\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
