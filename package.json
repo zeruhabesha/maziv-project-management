@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "description": "Maziv Project Management - Root Workspace",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "workspaces": [
     "server"
   ],
