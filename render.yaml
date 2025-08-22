@@ -11,18 +11,9 @@ services:
         generateValue: true
       - key: PORT
         value: 10000
-      - key: NODE_OPTIONS
-        value: "--experimental-modules --es-module-specifier-resolution=node"
-      - key: NODE_VERSION
-        value: 20.x
     plan: free
     numInstances: 1
     healthCheckPath: /api/health
-    autoDeploy: true
-    buildCommand: |
-      echo "Building with Node.js 20..."
-      npm install -g npm@latest
-      cd server && npm install
 
 databases:
   - name: maziv-db
