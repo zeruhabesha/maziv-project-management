@@ -1,17 +1,8 @@
-#!/bin/bash
-
-# Exit on error
+#!/bin/sh
 set -e
 
-# Install the correct Node.js version
-NODE_VERSION=20.14.0
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # Load nvm
-nvm install $NODE_VERSION
-nvm use $NODE_VERSION
-
-# Install dependencies
-npm install
+# Ensure we're in the right directory
+cd /usr/src/app
 
 # Start the server
-node --experimental-modules --es-module-specifier-resolution=node app.js
+node server/app.js
