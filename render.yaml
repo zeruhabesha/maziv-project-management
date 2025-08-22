@@ -4,7 +4,7 @@ services:
     env: node
     buildCommand: |
       cd server && npm install
-    startCommand: cd server && node --experimental-modules --es-module-specifier-resolution=node app.js
+    startCommand: cd server && npm start
     envVars:
       - key: NODE_VERSION
         value: 20.x
