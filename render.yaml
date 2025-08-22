@@ -2,22 +2,19 @@ services:
   - type: web
     name: maziv-backend
     env: node
-    build:
-      command: "npm install"
-      publish: "/server"
+    buildCommand: cd server && npm install
+    startCommand: node --experimental-modules --es-module-specifier-resolution=node server/app.js
     envVars:
       - key: NODE_VERSION
-        value: 18.x
+        value: 20.x
       - key: NPM_CONFIG_PRODUCTION
         value: "false"
-      - key: DATABASE_URL
-        fromDatabase:
-          name: maziv-db
-          property: connectionString
-      - key: JWT_SECRET
-        generateValue: true
       - key: NODE_ENV
         value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
     plan: free
     numInstances: 1
     healthCheckPath: /api/health
