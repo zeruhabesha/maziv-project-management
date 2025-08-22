@@ -1,8 +1,13 @@
 #!/bin/sh
 set -e
 
-# Ensure we're in the right directory
-cd /usr/src/app
+# Change to the server directory
+cd /usr/src/app/server
+
+# Install dependencies if needed
+if [ "$NODE_ENV" = "development" ]; then
+  npm install
+fi
 
 # Start the server
-node server/app.js
+exec node --experimental-modules --es-module-specifier-resolution=node app.js
