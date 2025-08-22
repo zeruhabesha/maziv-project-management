@@ -1,68 +1,41 @@
-# Build stage
-FROM node:20-alpine AS builder
+# Use Node.js 20
+FROM node:20-alpine
 
+# Set working directory
 WORKDIR /usr/src/app
 
 # Copy package files
 COPY package*.json ./
 COPY server/package*.json ./server/
 
-# Install all dependencies including devDependencies
+# Install dependencies
 RUN npm install
 RUN cd server && npm install
 
-# Copy app source
+# Copy application code
 COPY . .
 
-# Build the app
-RUN npm run build
-
-# Production stage
-FROM node:20-alpine
-
-WORKDIR /usr/src/app
-
-# Copy package files
-COPY package*.json ./
-COPY server/package*.json ./server/
-
-# Install only production dependencies
-RUN npm install --only=production
-RUN cd server && npm install --only=production
-
-# Copy built files from builder
-COPY --from=builder /usr/src/app/dist ./dist
-COPY --from=builder /usr/src/app/server ./server
-
-# Copy necessary files
-COPY .sequelizerc ./
-COPY .env* ./
-
-# Set environment to production
+# Set environment variables
 ENV NODE_ENV=production
 ENV PORT=10000
 
-# Create uploads directory
+# Create necessary directories
 RUN mkdir -p /usr/src/app/server/uploads/items
 RUN mkdir -p /usr/src/app/server/uploads/projects
 RUN chmod -R 777 /usr/src/app/server/uploads
 
-# Copy start scripts
-COPY start.sh /usr/src/app/start.sh
-COPY server/start.sh /usr/src/app/server/start.sh
+# Build the application
+RUN npm run build
 
 # Set working directory to server
 WORKDIR /usr/src/app/server
 
-# Set permissions
-RUN chmod +x /usr/src/app/start.sh /usr/src/app/server/start.sh
-
-# Expose the app port
+# Expose the port the app runs on
 EXPOSE 10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:10000/api/health || exit 1
 
-# Start the app
-CMD ["/usr/src/app/server/start.sh"]
+# Start command
+CMD ["node", "--experimental-modules", "--es-module-specifier-resolution=node", "app.js"]
