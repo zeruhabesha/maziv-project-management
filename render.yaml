@@ -3,8 +3,8 @@ services:
     name: maziv-backend
     env: node
     buildCommand: |
-      cd server && npm install
-    startCommand: cd server && npm start
+      cd server && chmod +x start.sh && npm install
+    startCommand: ./server/start.sh
     envVars:
       - key: NODE_VERSION
         value: 20.x
