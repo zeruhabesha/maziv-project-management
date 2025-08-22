@@ -2,8 +2,9 @@ services:
   - type: web
     name: maziv-backend
     env: node
-    buildCommand: cd server && npm install
-    startCommand: node --experimental-modules --es-module-specifier-resolution=node server/app.js
+    buildCommand: |
+      cd server && npm install
+    startCommand: cd server && node --experimental-modules --es-module-specifier-resolution=node app.js
     envVars:
       - key: NODE_VERSION
         value: 20.x
