@@ -1,22 +1,14 @@
-# Ignore all files and directories except the server directory
-*/
-!server/
+*
+!server/**
 !render.yaml
-!.npmrc
-
-# But ignore these server files
-server/node_modules/
-server/.env
-server/.git
-server/.gitignore
-
-# Ignore the rest of the root directory
-!package.json
-!package-lock.json
 !Dockerfile
-!/.nvmrc
-!/.node-version
-
+!.npmrc
 !.nvmrc
 !.node-version
+!package.json
+!package-lock.json
 
+server/node_modules/
+server/.env
+server/.git/
+server/.gitignore
