@@ -97,6 +97,26 @@ if (isProduction) {
 
 // Database connection and server startup
 const startServer = async () => {
+  // Log environment info for debugging
+  console.log('Environment:', {
+    NODE_ENV: process.env.NODE_ENV,
+    DATABASE_URL: process.env.DATABASE_URL ? '***DATABASE_URL is set***' : 'DATABASE_URL is not set',
+    DB_HOST: process.env.DB_HOST ? '***DB_HOST is set***' : 'DB_HOST is not set',
+    DB_NAME: process.env.DB_NAME ? '***DB_NAME is set***' : 'DB_NAME is not set',
+    PORT: process.env.PORT || 5000
+  });
+
+  // Log database configuration
+  try {
+    const { config } = require('./config/database.cjs');
+    console.log('Database config:', {
+      ...config,
+      password: config.password ? '***' : 'no password',
+      ssl: config.dialectOptions?.ssl ? 'enabled' : 'disabled'
+    });
+  } catch (error) {
+    console.warn('Could not load database config:', error.message);
+  }
   try {
     // First connect to database
     const dbConnected = await connectDB();
