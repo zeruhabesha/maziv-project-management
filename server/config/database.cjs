@@ -80,42 +80,54 @@ const parseDatabaseUrl = (url) => {
 
 // Function to get database config from environment
 const getDbConfigFromEnv = () => {
-  // Check if we have a direct database URL
-  const dbUrl = process.env.DATABASE_URL || 
-               (config.use_env_variable && process.env[config.use_env_variable]);
-  
-  if (dbUrl) {
-    console.log('Using database URL from environment');
-    try {
-      const dbConfig = parseDatabaseUrl(dbUrl);
-      return {
-        ...dbConfig,
-        ...config,
-        dialect: 'postgres',
-        dialectOptions: {
-          ...(config.dialectOptions || {}),
-          ...(dbConfig.dialectOptions || {})
-        }
-      };
-    } catch (error) {
-      console.error('Error parsing database URL:', error);
-      // Continue to try other config methods
+  // In production, always use DATABASE_URL if available
+  if (process.env.NODE_ENV === 'production') {
+    const dbUrl = process.env.DATABASE_URL || 
+                 (config.use_env_variable && process.env[config.use_env_variable]);
+    
+    if (dbUrl) {
+      console.log('Using production database URL from environment');
+      try {
+        const dbConfig = parseDatabaseUrl(dbUrl);
+        // In production, we want to ensure SSL is enabled
+        return {
+          ...dbConfig,
+          dialect: 'postgres',
+          protocol: 'postgres',
+          dialectOptions: {
+            ssl: {
+              require: true,
+              rejectUnauthorized: false
+            }
+          },
+          // Don't merge with config from config.json in production
+          // to avoid any local development settings leaking in
+          logging: (sql, options) => {
+            console.log(`[${new Date().toISOString()}]`, sql);
+          }
+        };
+      } catch (error) {
+        console.error('Error parsing production database URL:', error);
+        throw error; // Fail fast in production
+      }
     }
+    throw new Error('DATABASE_URL is required in production environment');
   }
   
-  // Try to use individual environment variables
+  // Development environment - try local config
   const envConfig = {
     database: process.env.DB_NAME || config.database,
     username: process.env.DB_USER || config.username,
     password: process.env.DB_PASSWORD || config.password,
-    host: process.env.DB_HOST || config.host,
-    port: process.env.DB_PORT || config.port,
+    host: process.env.DB_HOST || config.host || 'localhost',
+    port: process.env.DB_PORT || config.port || 5432,
     dialect: 'postgres',
-    ...config
+    protocol: 'postgres',
+    logging: console.log
   };
   
-  if (envConfig.database && envConfig.username && envConfig.password) {
-    console.log('Using database config from individual environment variables');
+  if (envConfig.database && envConfig.username) {
+    console.log('Using development database config');
     return envConfig;
   }
   
@@ -123,28 +135,28 @@ const getDbConfigFromEnv = () => {
 };
 
 try {
-  // Try to get config from environment first
+  // Get the database configuration
   const dbConfig = getDbConfigFromEnv();
   
-  if (dbConfig) {
-    console.log('Initializing database with config:', {
-      ...dbConfig,
-      password: dbConfig.password ? '***' : 'no password',
-      ssl: dbConfig.ssl ? 'enabled' : 'disabled'
-    });
-    
-    sequelize = new Sequelize(dbConfig);
-  } else if (config.database && config.username && config.password) {
-    // Fall back to config file
-    console.log('Using config from config.json for database connection');
-    sequelize = new Sequelize({
-      ...config,
-      dialect: config.dialect || 'postgres',
-      logging: console.log
-    });
-  } else {
-    throw new Error('No valid database configuration found. Please check your environment variables and config.json');
+  if (!dbConfig) {
+    throw new Error('No valid database configuration found');
   }
+  
+  console.log('Initializing database with config:', {
+    ...dbConfig,
+    password: dbConfig.password ? '***' : 'no password',
+    ssl: dbConfig.dialectOptions?.ssl ? 'enabled' : 'disabled',
+    host: dbConfig.host,
+    database: dbConfig.database,
+    username: dbConfig.username ? '***' : 'not set'
+  });
+  
+  // Initialize Sequelize with the configuration
+  sequelize = new Sequelize(dbConfig);
+  
+  // Test the connection
+  await sequelize.authenticate();
+  console.log('Database connection has been established successfully.');
 } catch (error) {
   console.error('Failed to initialize database connection:', error);
   throw error; // Re-throw to prevent the app from starting with a bad DB connection
@@ -152,8 +164,20 @@ try {
 
 const connectDB = async () => {
     try {
+        if (!sequelize) {
+            throw new Error('Sequelize instance not initialized');
+        }
+        
+        // Test the connection
         await sequelize.authenticate();
-        console.log('Connection has been established successfully.');
+        
+        // Sync all models
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('Syncing database models...');
+            await sequelize.sync();
+        }
+        
+        console.log('✅ Database connection has been established successfully.');
         return true;
     } catch (error) {
         console.error('Unable to connect to the database:', error);
