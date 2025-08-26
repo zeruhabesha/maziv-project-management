@@ -13,3 +13,6 @@ server/.gitignore
 # Ignore the rest of the root directory
 !package.json
 !package-lock.json
+!Dockerfile
+!/.nvmrc
+!/.node-version
