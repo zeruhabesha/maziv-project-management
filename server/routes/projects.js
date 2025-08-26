@@ -138,7 +138,7 @@ router.post(
       const project = await Project.create(projectData);
 
       // Notify all admins and managers
-      const notifyUsers = await User.findAll({ where: { role: ["admin", "manager"] } });
+      const notifyUsers = await User.findAll({ where: { role: { [Op.in]: ['admin','manager'] } } });
       for (const user of notifyUsers) {
         await createNotification(user.id, "project_created", `A new project '${project.name}' has been created.`);
       }

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: maziv-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+    plan: free
+    numInstances: 1
+    healthCheckPath: /api/health
+
+databases:
+  - name: maziv-db
+    databaseName: maziv_production
+    user: maziv_user
+    plan: free
+    deleteProtection: false

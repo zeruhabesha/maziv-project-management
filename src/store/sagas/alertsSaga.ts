@@ -1,28 +1,18 @@
-import { call, put, takeEvery } from 'redux-saga/effects';
-import { fetchAlertsStart, fetchAlertsSuccess, fetchAlertsFailure } from '../slices/alertsSlice';
-import { getUserAlerts } from '../../services/api/users';
-import { PayloadAction } from '@reduxjs/toolkit';
+// src/store/sagas/alertsSaga.ts
+import { call, put, takeLatest } from 'redux-saga/effects';
 import api from '../../services/api';
+import { fetchAlertsStart, fetchAlertsSuccess, fetchAlertsFailure } from '../slices/alertsSlice';
 
-function* fetchAlertsSaga(action: PayloadAction<{ userId: string; projectId?: string }>): Generator<any, void, any> {
+function* fetchAlertsWorker(action: ReturnType<typeof fetchAlertsStart>) {
   try {
-    const { userId, projectId } = action.payload;
-    // Build the URL with optional project filter
-    let url = `/users/${userId}/alerts`;
-    if (projectId && projectId !== 'undefined') {
-      url += `?project_id=${projectId}`;
-    }
-    
-    const response = yield call(() => api.get(url));
-    yield put(fetchAlertsSuccess(response.data.data));
-  } catch (error) {
-    const err = error as any;
-    console.error('Fetch alerts error:', err);
-    const message = err?.response?.data?.message || err?.message || 'Failed to fetch alerts';
-    yield put(fetchAlertsFailure(message));
+    const { userId } = action.payload;
+    const { data } = yield call(api.get, `/users/${userId}/alerts`);
+    yield put(fetchAlertsSuccess(data || []));
+  } catch (err: any) {
+    yield put(fetchAlertsFailure(err?.response?.data?.message || 'Failed to fetch alerts'));
   }
 }
 
 export default function* alertsSaga() {
-  yield takeEvery(fetchAlertsStart.type, fetchAlertsSaga);
-} 
+  yield takeLatest(fetchAlertsStart.type, fetchAlertsWorker);
+}

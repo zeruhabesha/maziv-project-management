@@ -1,23 +1,24 @@
+// src/store/slices/notificationsSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
-interface Notification {
+export interface Notification {
   id: string;
-  type: string;
+  user_id: string;
   message: string;
   is_read: boolean;
-  createdAt: string;
+  createdAt?: string;
 }
 
 interface NotificationsState {
-  notifications: Notification[];
+  list: Notification[];
   unreadCount: number;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: NotificationsState = {
-  notifications: [],
-  unreadCount: 0,
+  list: [],            // ✅ always an array
+  unreadCount: 0,      // ✅ derived & stored for Header badge
   loading: false,
   error: null,
 };
@@ -26,27 +27,36 @@ const notificationsSlice = createSlice({
   name: 'notifications',
   initialState,
   reducers: {
-    fetchNotificationsStart: (state, action: PayloadAction<string>) => { state.loading = true; state.error = null; },
-    fetchNotificationsSuccess: (state, action: PayloadAction<Notification[]>) => {
-      state.loading = false;
-      state.notifications = action.payload;
-      state.unreadCount = action.payload.filter(n => !n.is_read).length;
+    fetchNotificationsStart(state, _action: PayloadAction<{ userId: string }>) {
+      state.loading = true;
+      state.error = null;
     },
-    fetchNotificationsFailure: (state, action: PayloadAction<string>) => {
+    fetchNotificationsSuccess(state, action: PayloadAction<Notification[]>) {
+      state.loading = false;
+      state.list = action.payload ?? [];
+      state.unreadCount = state.list.filter(n => !n.is_read).length;
+    },
+    fetchNotificationsFailure(state, action: PayloadAction<string>) {
       state.loading = false;
       state.error = action.payload;
     },
-    markNotificationRead: (state, action: PayloadAction<string>) => {
-      const notif = state.notifications.find(n => n.id === action.payload);
-      if (notif && !notif.is_read) {
-        notif.is_read = true;
-        state.unreadCount = Math.max(0, state.unreadCount - 1);
-      }
+
+    markNotificationReadStart(state, _action: PayloadAction<{ id: string }>) {
+      // no-op
     },
-    markAllNotificationsRead: (state) => {
-      state.notifications.forEach(n => { n.is_read = true; });
+    markNotificationReadSuccess(state, action: PayloadAction<{ id: string }>) {
+      const n = state.list.find(x => x.id === action.payload.id);
+      if (n) n.is_read = true;
+      state.unreadCount = state.list.filter(x => !x.is_read).length;
+    },
+    markNotificationReadFailure(state, action: PayloadAction<string>) {
+      state.error = action.payload;
+    },
+
+    clearNotifications(state) {
+      state.list = [];
       state.unreadCount = 0;
-    },
+    }
   },
 });
 
@@ -54,8 +64,10 @@ export const {
   fetchNotificationsStart,
   fetchNotificationsSuccess,
   fetchNotificationsFailure,
-  markNotificationRead,
-  markAllNotificationsRead,
+  markNotificationReadStart,
+  markNotificationReadSuccess,
+  markNotificationReadFailure,
+  clearNotifications,
 } = notificationsSlice.actions;
 
 export default notificationsSlice.reducer;

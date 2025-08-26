@@ -6,6 +6,7 @@ import compression from "compression";
 import dotenv from "dotenv";
 import cron from "node-cron";
 import path from "path";
+import rateLimit from 'express-rate-limit';
 
 import pkg from "./config/database.cjs";
 const { sequelize, connectDB, getSequelize } = pkg;
@@ -22,25 +23,77 @@ import { checkDeadlines } from "./services/alertService.js";
 dotenv.config();
 
 const app = express();
+const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 5000;
+
+// Trust first proxy (for Render's load balancer)
+app.set('trust proxy', 1);
 
 // Serve static files for item uploads
 app.use('/uploads/items', express.static(path.join(process.cwd(), 'server', 'uploads', 'items')));
 // Serve static files for project uploads
 app.use('/uploads/projects', express.static(path.join(process.cwd(), 'server', 'uploads', 'projects')));
 
-// Middleware
-app.use(helmet());
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: isProduction ? undefined : false,
+  crossOriginEmbedderPolicy: isProduction,
+  crossOriginOpenerPolicy: isProduction,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  dnsPrefetchControl: true,
+  frameguard: { action: 'sameorigin' },
+  hidePoweredBy: true,
+  hsts: isProduction,
+  ieNoOpen: true,
+  noSniff: true,
+  xssFilter: true,
+}));
+
+// CORS configuration
+const allowedOrigins = [
+  'https://maziv-project-management.vercel.app', // Production frontend
+  'http://localhost:5173' // Local development
+];
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // Log unauthorized origins in production
+      if (isProduction) {
+        console.warn(`Blocked request from origin: ${origin}`);
+      }
+      
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
   })
 );
-app.use(compression());
-app.use(morgan("dev")); // More readable logs during development
-app.use(express.json({ limit: "10mb" }));
-app.use(express.urlencoded({ extended: true }));
+
+// Compression
+app.use(compression({ level: 6 }));
+
+// Logging
+app.use(morgan(isProduction ? 'combined' : 'dev'));
+
+// Body parsing
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate limiting in production
+
+if (isProduction) {
+  const limiter = rateLimit({ windowMs: 15*60*1000, max: 100, message: 'Too many requests…' });
+  app.use(limiter);
+}
 
 // Database connection and server startup
 const startServer = async () => {
@@ -104,11 +157,50 @@ const startServer = async () => {
 
     process.on("SIGTERM", shutdown);
     process.on("SIGINT", shutdown);
+    return server;
   } catch (error) {
     console.error("Failed to start server:", error);
     process.exit(1);
   }
 };
 
-// Start the application
-startServer();
+// Start the server
+const server = startServer();
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+  console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+  console.error(err.name, err.message);
+  if (server) {
+    server.close(() => {
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+  console.error(err.name, err.message);
+  if (server) {
+    server.close(() => {
+      process.exit(1);
+    });
+  } else {
+    process.exit(1);
+  }
+});
+
+// Handle SIGTERM signal (for Render)
+process.on('SIGTERM', () => {
+  console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
+  if (server) {
+    server.close(() => {
+      console.log('💥 Process terminated!');
+    });
+  } else {
+    process.exit(0);
+  }
+});

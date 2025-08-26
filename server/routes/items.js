@@ -6,6 +6,7 @@ import { createNotification } from "../services/notificationService.js";
 import pkg from "../models/index.cjs";
 const { Item, Supplier, User, Phase, Project } = pkg;
 const router = express.Router();
+import { Op } from 'sequelize';
 
 // Set up multer storage for item files
 const storage = multer.diskStorage({
@@ -136,7 +137,8 @@ router.post("/", upload.single("file"), async (req, res) => {
             await createNotification(assignedUser.id, "item_assigned", `You have been assigned to item '${item.name}'.`);
           }
         } else {
-          const notifyUsers = await User.findAll({ where: { role: ["admin", "manager"] } });
+          const notifyUsers = await User.findAll({ where: { role: { [Op.in]: ['admin','manager'] } } });
+
           for (const user of notifyUsers) {
             await createNotification(user.id, "item_created", `A new item '${item.name}' has been created.`);
           }

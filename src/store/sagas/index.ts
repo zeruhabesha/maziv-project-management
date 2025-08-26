@@ -3,8 +3,9 @@ import authSaga from './authSaga';
 import projectsSaga from './projectsSaga';
 import itemsSaga from './itemsSaga';
 import usersSaga from './usersSaga';
-import reportsSaga from './reportsSaga'; // Import the new saga
+import reportsSaga from './reportsSaga';
 import alertsSaga from './alertsSaga';
+import notificationsSaga from './notificationsSaga';
 
 export function* rootSaga() {
   yield all([
@@ -12,7 +13,8 @@ export function* rootSaga() {
     fork(projectsSaga),
     fork(itemsSaga),
     fork(usersSaga),
-    fork(reportsSaga), // Add the new saga here
-    fork(alertsSaga),
+    fork(reportsSaga),
+    fork(alertsSaga),           // ✅
+    fork(notificationsSaga),    // ✅
   ]);
 }

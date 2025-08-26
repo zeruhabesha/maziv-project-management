@@ -105,7 +105,7 @@ const Dashboard: React.FC = () => {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="bg-white rounded-xl shadow-sm border p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Alerts</h3>
           <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-            {dashboard.alerts.length > 0 ? dashboard.alerts.map((alert: any) => (
+          {dashboard.alerts?.length ? dashboard.alerts.map((alert: any) => (
               <div key={alert.id} className="flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50">
                 <div className={`flex-shrink-0 w-2 h-2 ${alert.severity === 'high' || alert.type === 'overdue' ? 'bg-red-500' : 'bg-yellow-500'} rounded-full mt-1.5`}></div>
                 <div>

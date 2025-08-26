@@ -1,23 +1,36 @@
-import { call, put, takeEvery } from 'redux-saga/effects';
-import api from '../../services/api'; // or your api instance
+// src/store/sagas/notificationsSaga.ts
+import { call, put, takeLatest } from 'redux-saga/effects';
+import api from '../../services/api';
 import {
   fetchNotificationsStart,
   fetchNotificationsSuccess,
   fetchNotificationsFailure,
+  markNotificationReadStart,
+  markNotificationReadSuccess,
+  markNotificationReadFailure,
 } from '../slices/notificationsSlice';
-import { PayloadAction } from '@reduxjs/toolkit';
 
-function* fetchNotificationsSaga(action: PayloadAction<string>): Generator<any, void, any> {
+function* fetchNotificationsWorker(action: ReturnType<typeof fetchNotificationsStart>) {
   try {
-    const userId = action.payload;
-    const response = yield call(() => api.get(`/users/${userId}/notifications`));
-    yield put(fetchNotificationsSuccess(response.data.data));
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to fetch notifications';
-    yield put(fetchNotificationsFailure(message));
+    const { userId } = action.payload;
+    const { data } = yield call(api.get, `/users/${userId}/notifications`);
+    yield put(fetchNotificationsSuccess(data || []));
+  } catch (err: any) {
+    yield put(fetchNotificationsFailure(err?.response?.data?.message || 'Failed to fetch notifications'));
+  }
+}
+
+function* markNotificationReadWorker(action: ReturnType<typeof markNotificationReadStart>) {
+  try {
+    const { id } = action.payload;
+    yield call(api.patch, `/notifications/${id}/read`); // backend should flip is_read=true
+    yield put(markNotificationReadSuccess({ id }));
+  } catch (err: any) {
+    yield put(markNotificationReadFailure(err?.response?.data?.message || 'Failed to mark notification read'));
   }
 }
 
 export default function* notificationsSaga() {
-  yield takeEvery(fetchNotificationsStart.type, fetchNotificationsSaga);
+  yield takeLatest(fetchNotificationsStart.type, fetchNotificationsWorker);
+  yield takeLatest(markNotificationReadStart.type, markNotificationReadWorker);
 }
