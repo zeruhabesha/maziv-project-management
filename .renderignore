@@ -16,3 +16,7 @@ server/.gitignore
 !Dockerfile
 !/.nvmrc
 !/.node-version
+
+!.nvmrc
+!.node-version
+
