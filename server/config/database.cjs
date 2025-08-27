@@ -134,50 +134,82 @@ const getDbConfigFromEnv = () => {
   return null;
 };
 
-try {
-  // Get the database configuration
-  const dbConfig = getDbConfigFromEnv();
-  
-  if (!dbConfig) {
-    throw new Error('No valid database configuration found');
+// Initialize database connection
+const initializeDatabase = async () => {
+  try {
+    // Get the database configuration
+    const dbConfig = getDbConfigFromEnv();
+    
+    if (!dbConfig) {
+      throw new Error('No valid database configuration found');
+    }
+    
+    console.log('Initializing database with config:', {
+      ...dbConfig,
+      password: dbConfig.password ? '***' : 'no password',
+      ssl: dbConfig.dialectOptions?.ssl ? 'enabled' : 'disabled',
+      host: dbConfig.host,
+      database: dbConfig.database,
+      username: dbConfig.username ? '***' : 'not set'
+    });
+    
+    // Initialize Sequelize with the configuration
+    const instance = new Sequelize(dbConfig);
+    
+    // Test the connection
+    await instance.authenticate();
+    console.log('✅ Database connection has been established successfully.');
+    return instance;
+  } catch (error) {
+    console.error('❌ Failed to initialize database connection:', error);
+    throw error; // Re-throw to prevent the app from starting with a bad DB connection
   }
-  
-  console.log('Initializing database with config:', {
-    ...dbConfig,
-    password: dbConfig.password ? '***' : 'no password',
-    ssl: dbConfig.dialectOptions?.ssl ? 'enabled' : 'disabled',
-    host: dbConfig.host,
-    database: dbConfig.database,
-    username: dbConfig.username ? '***' : 'not set'
-  });
-  
-  // Initialize Sequelize with the configuration
-  sequelize = new Sequelize(dbConfig);
-  
-  // Test the connection
-  await sequelize.authenticate();
-  console.log('Database connection has been established successfully.');
-} catch (error) {
-  console.error('Failed to initialize database connection:', error);
-  throw error; // Re-throw to prevent the app from starting with a bad DB connection
-}
+};
+
+// Initialize the database connection when this module is loaded
+// let sequelize;
+let isInitialized = false;
+
+// This will be called when the module is first imported
+(async () => {
+  try {
+    sequelize = await initializeDatabase();
+    isInitialized = true;
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  }
+})();
 
 const connectDB = async () => {
     try {
-        if (!sequelize) {
-            throw new Error('Sequelize instance not initialized');
+        // Wait for the database to initialize if it's not ready yet
+        if (!isInitialized) {
+            console.log('Waiting for database to initialize...');
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            while (!isInitialized && attempts < maxAttempts) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                attempts++;
+                console.log(`Waiting for database... (${attempts}/${maxAttempts})`);
+            }
+            
+            if (!isInitialized) {
+                throw new Error('Database initialization timed out');
+            }
         }
         
         // Test the connection
         await sequelize.authenticate();
         
-        // Sync all models
+        // Sync all models in development
         if (process.env.NODE_ENV !== 'production') {
             console.log('Syncing database models...');
             await sequelize.sync();
         }
         
-        console.log('✅ Database connection has been established successfully.');
+        console.log('✅ Database connection is ready');
         return true;
     } catch (error) {
         console.error('Unable to connect to the database:', error);
@@ -186,7 +218,23 @@ const connectDB = async () => {
 };
 
 const getSequelize = () => {
+  if (!isInitialized) {
+    throw new Error('Database not initialized. Call connectDB() first.');
+  }
   return sequelize;
 };
 
-module.exports = { sequelize, connectDB, getSequelize };
+// Export the initialized sequelize instance and functions
+module.exports = {
+  // The sequelize instance (might be undefined if not initialized yet)
+  sequelize: () => {
+    if (!isInitialized) {
+      throw new Error('Database not initialized. Call connectDB() first.');
+    }
+    return sequelize;
+  },
+  connectDB,
+  getSequelize,
+  // Add a method to check if database is initialized
+  isInitialized: () => isInitialized
+};
