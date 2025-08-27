@@ -3,8 +3,18 @@ import pkg from "../config/database.cjs";
 const { getSequelize } = pkg;
 import { Op } from 'sequelize';
 
-const { models } = getSequelize();
-const { Item, Project, Alert, User } = models;
+let models;
+let Item, Project, Alert, User;
+
+// Initialize models when needed
+const initModels = async () => {
+  if (!models) {
+    const sequelize = await getSequelize();
+    models = sequelize.models;
+    ({ Item, Project, Alert, User } = models);
+  }
+  return { Item, Project, Alert, User };
+};
 
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
@@ -18,6 +28,7 @@ const transporter = nodemailer.createTransport({
 
 export const checkDeadlines = async () => {
   try {
+    await initModels();
     const now = new Date();
     const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
 
@@ -133,6 +144,7 @@ export const checkDeadlines = async () => {
 
 export const createAlert = async (userId, type, message, projectId = null, severity = 'medium') => {
   try {
+    await initModels();
     console.log('Creating alert:', { userId, type, message, projectId, severity });
     
     const alert = await Alert.create({
@@ -154,7 +166,8 @@ export const createAlert = async (userId, type, message, projectId = null, sever
   }
 };
 
-const sendDeadlineEmail = async (item, type) => {
+export const sendDeadlineEmail = async (item, type) => {
+  await initModels();
   try {
     if (
       !process.env.SMTP_USER ||

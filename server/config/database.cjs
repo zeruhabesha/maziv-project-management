@@ -166,20 +166,30 @@ const initializeDatabase = async () => {
   }
 };
 
-// Initialize the database connection when this module is loaded
-// let sequelize;
-let isInitialized = false;
-
 // This will be called when the module is first imported
-(async () => {
-  try {
-    sequelize = await initializeDatabase();
-    isInitialized = true;
-  } catch (error) {
-    console.error('Failed to initialize database:', error);
-    process.exit(1);
+const initDatabase = async () => {
+  if (initPromise) {
+    return initPromise;
   }
-})();
+  
+  initPromise = (async () => {
+    try {
+      console.log('Initializing database connection...');
+      sequelize = await initializeDatabase();
+      isInitialized = true;
+      console.log('✅ Database initialization complete');
+      return sequelize;
+    } catch (error) {
+      console.error('❌ Failed to initialize database:', error);
+      process.exit(1);
+    }
+  })();
+  
+  return initPromise;
+};
+
+// Start the initialization immediately
+initDatabase();
 
 const connectDB = async () => {
     try {
@@ -217,9 +227,15 @@ const connectDB = async () => {
     }
 };
 
-const getSequelize = () => {
+const getSequelize = async () => {
   if (!isInitialized) {
-    throw new Error('Database not initialized. Call connectDB() first.');
+    console.log('Database not yet initialized, waiting for initialization...');
+    try {
+      await initPromise;
+      return sequelize;
+    } catch (error) {
+      throw new Error('Failed to initialize database: ' + error.message);
+    }
   }
   return sequelize;
 };
