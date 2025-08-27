@@ -107,26 +107,29 @@ const startServer = async () => {
   });
 
   // Log database configuration
-  try {
-    const { config } = require('./config/database.cjs');
-    console.log('Database config:', {
-      ...config,
-      password: config.password ? '***' : 'no password',
-      ssl: config.dialectOptions?.ssl ? 'enabled' : 'disabled'
-    });
-  } catch (error) {
-    console.warn('Could not load database config:', error.message);
-  }
+  console.log('Database configuration check:', {
+    hasDatabaseUrl: !!process.env.DATABASE_URL,
+    nodeEnv: process.env.NODE_ENV,
+    databaseHost: process.env.DB_HOST || 'not set',
+    databaseName: process.env.DB_NAME || 'not set'
+  });
   try {
     // First connect to database
+    console.log('Connecting to database...');
     const dbConnected = await connectDB();
 
     if (!dbConnected) {
       throw new Error("Failed to connect to database");
     }
 
-    //Then we will Sync the database
-    await sequelize.sync();
+    // Get the sequelize instance after connection is established
+    const { sequelize } = await import('./config/database.cjs');
+    
+    // Sync the database in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Syncing database models...');
+      await sequelize.sync();
+    }
 
     // Then setup routes
     app.use("/api/auth", authRoutes.default);

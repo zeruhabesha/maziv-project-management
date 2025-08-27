@@ -166,26 +166,33 @@ const initializeDatabase = async () => {
   }
 };
 
+// Database state management
+const dbState = {
+  sequelize: null,
+  isInitialized: false,
+  initPromise: null
+};
+
 // This will be called when the module is first imported
 const initDatabase = async () => {
-  if (initPromise) {
-    return initPromise;
+  if (dbState.initPromise) {
+    return dbState.initPromise;
   }
   
-  initPromise = (async () => {
+  dbState.initPromise = (async () => {
     try {
       console.log('Initializing database connection...');
-      sequelize = await initializeDatabase();
-      isInitialized = true;
+      dbState.sequelize = await initializeDatabase();
+      dbState.isInitialized = true;
       console.log('✅ Database initialization complete');
-      return sequelize;
+      return dbState.sequelize;
     } catch (error) {
       console.error('❌ Failed to initialize database:', error);
       process.exit(1);
     }
   })();
   
-  return initPromise;
+  return dbState.initPromise;
 };
 
 // Start the initialization immediately
@@ -194,29 +201,29 @@ initDatabase();
 const connectDB = async () => {
     try {
         // Wait for the database to initialize if it's not ready yet
-        if (!isInitialized) {
+        if (!dbState.isInitialized) {
             console.log('Waiting for database to initialize...');
             let attempts = 0;
             const maxAttempts = 10;
             
-            while (!isInitialized && attempts < maxAttempts) {
+            while (!dbState.isInitialized && attempts < maxAttempts) {
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 attempts++;
                 console.log(`Waiting for database... (${attempts}/${maxAttempts})`);
             }
             
-            if (!isInitialized) {
+            if (!dbState.isInitialized) {
                 throw new Error('Database initialization timed out');
             }
         }
         
         // Test the connection
-        await sequelize.authenticate();
+        await dbState.sequelize.authenticate();
         
         // Sync all models in development
         if (process.env.NODE_ENV !== 'production') {
             console.log('Syncing database models...');
-            await sequelize.sync();
+            await dbState.sequelize.sync();
         }
         
         console.log('✅ Database connection is ready');
@@ -228,29 +235,29 @@ const connectDB = async () => {
 };
 
 const getSequelize = async () => {
-  if (!isInitialized) {
+  if (!dbState.isInitialized) {
     console.log('Database not yet initialized, waiting for initialization...');
     try {
-      await initPromise;
-      return sequelize;
+      await dbState.initPromise;
+      return dbState.sequelize;
     } catch (error) {
       throw new Error('Failed to initialize database: ' + error.message);
     }
   }
-  return sequelize;
+  return dbState.sequelize;
 };
 
 // Export the initialized sequelize instance and functions
 module.exports = {
   // The sequelize instance (might be undefined if not initialized yet)
   sequelize: () => {
-    if (!isInitialized) {
+    if (!dbState.isInitialized) {
       throw new Error('Database not initialized. Call connectDB() first.');
     }
-    return sequelize;
+    return dbState.sequelize;
   },
   connectDB,
   getSequelize,
   // Add a method to check if database is initialized
-  isInitialized: () => isInitialized
+  isInitialized: () => dbState.isInitialized
 };
