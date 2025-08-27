@@ -13,30 +13,29 @@ if (!config) {
 let sequelize;
 
 // Helper function to parse database URL
+// filepath: c:\Maziv\maziv-project-management\server\config\database.cjs
+// ...existing code...
 const parseDatabaseUrl = (url) => {
   try {
     if (!url) {
       throw new Error('Database URL is empty');
     }
-    
-    console.log('Raw DATABASE_URL:', url);
-    
-    // If the URL is in the format 'DATABASE_URL=postgres://...', extract just the URL part
+
+    // Remove accidental prefix if present
     if (url.startsWith('DATABASE_URL=')) {
-      url = url.split('=')[1];
+      url = url.replace('DATABASE_URL=', '');
     }
-    
-    // Handle Render's PostgreSQL URL format
-  if (url.startsWith('postgres://')) {
+
+    // Convert postgres:// to postgresql:// for Sequelize compatibility
+    if (url.startsWith('postgres://')) {
       url = url.replace('postgres://', 'postgresql://');
     }
 
-    
     // Basic validation
-     if (!url || !url.startsWith('postgresql://')) {
+    if (!url.startsWith('postgresql://')) {
       throw new Error('Invalid database URL format. Must start with postgresql://');
     }
-    
+
     // Parse the URL
     const parsed = new URL(url);
     

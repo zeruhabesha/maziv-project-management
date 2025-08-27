@@ -96,11 +96,15 @@ if (isProduction) {
 }
 
 // Database connection and server startup
+// ...existing code...
+
 const startServer = async () => {
   // Log environment info for debugging
   console.log('Environment:', {
     NODE_ENV: process.env.NODE_ENV,
-    DATABASE_URL: process.env.DATABASE_URL ? '***DATABASE_URL is set***' : 'DATABASE_URL is not set',
+    DATABASE_URL: process.env.DATABASE_URL
+      ? (isProduction ? '***MASKED***' : process.env.DATABASE_URL)
+      : 'DATABASE_URL is not set',
     DB_HOST: process.env.DB_HOST ? '***DB_HOST is set***' : 'DB_HOST is not set',
     DB_NAME: process.env.DB_NAME ? '***DB_NAME is set***' : 'DB_NAME is not set',
     PORT: process.env.PORT || 5000
@@ -113,22 +117,26 @@ const startServer = async () => {
     databaseHost: process.env.DB_HOST || 'not set',
     databaseName: process.env.DB_NAME || 'not set'
   });
+
+  // Startup check for DATABASE_URL in production
+  if (isProduction && !process.env.DATABASE_URL) {
+    console.error("DATABASE_URL is required in production. Exiting.");
+    process.exit(1);
+  }
+
   try {
     // First connect to database
     console.log('Connecting to database...');
     const dbConnected = await connectDB();
 
     if (!dbConnected) {
-      throw new Error("Failed to connect to database");
+      throw new Error("Failed to connect to database. Check DATABASE_URL, credentials, and Render DB status.");
     }
 
-    // Get the sequelize instance after connection is established
-    const { sequelize } = await import('./config/database.cjs');
-    
     // Sync the database in development
-    if (process.env.NODE_ENV !== 'production') {
+    if (!isProduction) {
       console.log('Syncing database models...');
-      await sequelize.sync();
+      await sequelize().sync();
     }
 
     // Then setup routes
@@ -170,9 +178,13 @@ const startServer = async () => {
     const shutdown = async () => {
       console.log("Shutting down gracefully...");
       server.close(async () => {
-        if (sequelize) {
-          await sequelize.close();
-          console.log("Database connection closed");
+        try {
+          if (sequelize()) {
+            await sequelize().close();
+            console.log("Database connection closed");
+          }
+        } catch (err) {
+          console.error("Error closing database connection:", err);
         }
         process.exit(0);
       });
@@ -186,6 +198,7 @@ const startServer = async () => {
     process.exit(1);
   }
 };
+
 
 // Start the server
 const server = startServer();
