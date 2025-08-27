@@ -7,9 +7,9 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
-  server: {
+ server: {
     proxy: {
-      '/api': 'http://localhost:5000', // or your backend port
+      '/api': 'https://maziv-project-management.onrender.com', // use your live backend
     }
   }
 });
