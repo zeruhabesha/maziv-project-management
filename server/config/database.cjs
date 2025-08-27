@@ -27,12 +27,13 @@ const parseDatabaseUrl = (url) => {
     }
     
     // Handle Render's PostgreSQL URL format
-    if (url.startsWith('postgres://')) {
+  if (url.startsWith('postgres://')) {
       url = url.replace('postgres://', 'postgresql://');
     }
+
     
     // Basic validation
-    if (!url || !url.startsWith('postgresql://')) {
+     if (!url || !url.startsWith('postgresql://')) {
       throw new Error('Invalid database URL format. Must start with postgresql://');
     }
     
