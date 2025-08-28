@@ -1,4 +1,5 @@
-const { sequelize } = require('../models');
+import { sequelize } from '../models/index.cjs';
+import { execSync } from 'child_process';
 
 async function initializeDatabase() {
   try {
@@ -10,7 +11,6 @@ async function initializeDatabase() {
       await sequelize.sync({ alter: true }); // Safer than force: true
     } else {
       console.log('🔄 Running migrations in production...');
-      const { execSync } = require('child_process');
       execSync('npx sequelize-cli db:migrate', { stdio: 'inherit' });
     }
 
