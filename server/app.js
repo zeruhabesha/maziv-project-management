@@ -72,6 +72,11 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 if (isProduction) {
+  console.log('Syncing database models...');
+  await sequelize().sync({ alter: true }); // or { force: true } to drop and recreate
+}
+
+if (isProduction) {
   const limiter = rateLimit({ windowMs: 15*60*1000, max: 100, message: 'Too many requests…' });
   app.use(limiter);
 }
