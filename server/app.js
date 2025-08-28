@@ -41,7 +41,7 @@ import errorHandler from './middleware/errorHandler.js';
     app.get('/health', (_req, res) => res.json({ ok: true }));
 
     app.use('/api/auth', authRouter);
-    app.use('/api/users', authenticateToken, usersRouter);
+    app.use('/api/users', usersRouter);
     app.use('/api/projects', authenticateToken, projectsRouter);
     app.use('/api/items', authenticateToken, itemsRouter);
     app.use('/api/reports', authenticateToken, reportsRouter);
