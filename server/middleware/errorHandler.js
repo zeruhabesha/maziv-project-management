@@ -1,25 +1,25 @@
-export const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
+// server/middleware/errorHandler.js (ESM-only)
+export default function errorHandler(err, req, res, next) {
+  console.error(err.stack || err);
 
-  // Default error
-  let error = { ...err };
-  error.message = err.message;
+  // Default
+  let status = err.status || 500;
+  let message = err.message || "Server Error";
 
   // Sequelize validation error
-  if (err.name === 'SequelizeValidationError') {
-    const message = err.errors.map(e => e.message).join(', ');
-    error = { message, status: 400 };
+  if (err.name === "SequelizeValidationError") {
+    status = 400;
+    message = (err.errors || []).map(e => e.message).join(", ");
   }
 
-  //Sequelize UniqueConstraintError
-    if (err.name === 'SequelizeUniqueConstraintError') {
-        const message = 'Duplicate field value entered';
-        error = { message, status: 400 };
-    }
+  // Sequelize unique constraint
+  if (err.name === "SequelizeUniqueConstraintError") {
+    status = 400;
+    message = "Duplicate field value entered";
+  }
 
-
-  res.status(error.status || 500).json({
+  res.status(status).json({
     success: false,
-    message: error.message || 'Server Error'
+    message,
   });
-};
+}

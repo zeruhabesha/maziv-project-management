@@ -1,7 +1,6 @@
 import express from "express";
-import db from "../models/index.cjs";
-import { Op } from 'sequelize';
-const { Project, Item, Phase, Alert } = db;
+import models from "../models/index.cjs"; // CJS default import is fine
+const { Project, Item, Phase, Alert } = models; // <-- remove any require line
 const router = express.Router();
 
 router.get("/reports/projects/:id/progress", async (req, res) => {

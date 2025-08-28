@@ -1,79 +1,47 @@
-import express from 'express';
-import multer from 'multer';
-import path from 'node:path';
-import fs from 'node:fs';
-import { Op } from 'sequelize';
-
-import { createNotification } from '../services/notificationService.js';
-import pkg from '../models/index.cjs';
-const { Item, Supplier, User, Phase, Project } = pkg;
+import express from "express";
+import multer from "multer";
+import path from "node:path";
+import fs from "node:fs";
+import { Op } from "sequelize";
+import models from "../models/index.cjs";
+import { createNotification } from "../services/notificationService.js";
 
 const router = express.Router();
+const { Item, Supplier, Phase, Project, User } = models;
 
-/* ----------------------------- Uploads config ----------------------------- */
+// uploads root (allow override)
+const UPLOADS_ROOT = process.env.UPLOADS_ROOT || path.resolve("uploads");
+const itemsDir = path.join(UPLOADS_ROOT, "items");
+fs.mkdirSync(itemsDir, { recursive: true });
 
-// Allow overriding the uploads root (helpful on Render when using a Persistent Disk)
-const UPLOADS_ROOT =
-  process.env.UPLOADS_ROOT || path.resolve('uploads'); // <- with Root Dir=server this becomes /opt/render/project/src/server/uploads
-
-const ensureDir = (p) => {
-  try {
-    fs.mkdirSync(p, { recursive: true });
-  } catch (_) {}
-};
-
-const itemsDir = path.join(UPLOADS_ROOT, 'items');
-ensureDir(itemsDir);
-
-// Multer storage for item files
 const storage = multer.diskStorage({
-  destination: function (_req, _file, cb) {
-    cb(null, itemsDir);
-  },
-  filename: function (_req, file, cb) {
+  destination: (_req, _file, cb) => cb(null, itemsDir),
+  filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
-    const base = path.basename(file.originalname, ext).replace(/\s+/g, '_');
+    const base = path.basename(file.originalname, ext).replace(/\s+/g, "_");
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(null, `${base}-${unique}${ext}`);
   },
 });
 
-// Optional simple file filter (allow common doc/image/pdf types)
-// Feel free to extend or remove if you accept any file.
-const fileFilter = (_req, file, cb) => {
-  const allowed = [
-    'application/pdf',
-    'image/png',
-    'image/jpeg',
-    'image/jpg',
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ];
-  if (!allowed.includes(file.mimetype)) {
-    return cb(new Error('Unsupported file type'));
-  }
-  cb(null, true);
-};
+const allowed = new Set([
+  "application/pdf",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
 
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-});
+const fileFilter = (_req, file, cb) =>
+  allowed.has(file.mimetype) ? cb(null, true) : cb(new Error("Unsupported file type"));
 
-/* ---------------------------------- List ---------------------------------- */
+const upload = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
 
-router.get('/', async (req, res) => {
+// LIST
+router.get("/", async (req, res) => {
   try {
-    const {
-      projectId,
-      status,
-      type,
-      phase,
-      page = '1',
-      limit = '50',
-    } = req.query;
-
+    const { projectId, status, type, phase, page = "1", limit = "50" } = req.query;
     const pageNum = Number.parseInt(String(page), 10) || 1;
     const limitNum = Number.parseInt(String(limit), 10) || 50;
     const offset = (pageNum - 1) * limitNum;
@@ -87,119 +55,80 @@ router.get('/', async (req, res) => {
     const items = await Item.findAll({
       where,
       include: [
-        { model: Supplier, as: 'Supplier' },
-        { model: User, as: 'AssignedTo' },
-        { model: Phase, as: 'Phase' },
+        { model: Supplier, as: "Supplier" },
+        { model: User, as: "AssignedTo" },
+        { model: Phase, as: "Phase" },
       ],
-      order: [['createdAt', 'DESC']],
+      order: [["createdAt", "DESC"]],
       limit: limitNum,
       offset,
     });
 
     res.json({ success: true, data: items });
   } catch (error) {
-    console.error('Get items error:', error);
-    res
-      .status(500)
-      .json({ success: false, message: error?.message || 'Server error' });
+    console.error("Get items error:", error);
+    res.status(500).json({ success: false, message: error?.message || "Server error" });
   }
 });
 
-/* --------------------------------- Create --------------------------------- */
-
-router.post('/', upload.single('file'), async (req, res) => {
+// CREATE
+router.post("/", upload.single("file"), async (req, res) => {
   try {
-    const itemData = { ...req.body };
+    const data = { ...req.body };
+    if (req.file) data.file = req.file.filename; else if (typeof data.file !== "string") delete data.file;
 
-    // Only set file if uploaded
-    if (req.file) {
-      itemData.file = req.file.filename;
-    } else if (typeof itemData.file !== 'string') {
-      delete itemData.file;
-    }
-
-    // Normalize integer FK fields
-    const intFields = ['project_id', 'phase_id', 'supplier_id', 'assigned_to'];
-    for (const f of intFields) {
-      if (itemData[f] === '' || itemData[f] === undefined) {
-        itemData[f] = null;
-      } else {
-        const n = Number(itemData[f]);
-        itemData[f] = Number.isFinite(n) ? n : null;
+    for (const f of ["project_id", "phase_id", "supplier_id", "assigned_to"]) {
+      if (data[f] === "" || data[f] === undefined) data[f] = null;
+      else {
+        const n = Number(data[f]);
+        data[f] = Number.isFinite(n) ? n : null;
       }
     }
 
-    // Validate project_id
-    if (!itemData.project_id) {
-      return res.status(400).json({
-        success: false,
-        message: 'project_id is required and must be a valid project',
-      });
+    if (!data.project_id) {
+      return res.status(400).json({ success: false, message: "project_id is required and must be valid" });
     }
-    const project = await Project.findByPk(itemData.project_id);
-    if (!project) {
-      return res
-        .status(400)
-        .json({ success: false, message: 'Project does not exist' });
+    const project = await Project.findByPk(data.project_id);
+    if (!project) return res.status(400).json({ success: false, message: "Project does not exist" });
+
+    if (data.assigned_to != null) {
+      const user = await User.findByPk(data.assigned_to);
+      if (!user) return res.status(400).json({ success: false, message: "Assigned user does not exist" });
     }
 
-    // Validate assigned user if provided
-    if (itemData.assigned_to != null) {
-      const user = await User.findByPk(itemData.assigned_to);
-      if (!user) {
-        return res
-          .status(400)
-          .json({ success: false, message: 'Assigned user does not exist' });
-      }
-    }
+    data.quantity = data.quantity ? Number(data.quantity) : 0;
+    data.unit_price = data.unit_price ? Number(data.unit_price) : 0;
 
-    // Numbers
-    itemData.quantity = itemData.quantity ? Number(itemData.quantity) : 0;
-    itemData.unit_price = itemData.unit_price ? Number(itemData.unit_price) : 0;
-
-    const item = await Item.create(itemData);
-
+    const item = await Item.create(data);
     const createdItem = await Item.findByPk(item.id, {
       include: [
-        { model: Supplier, as: 'Supplier' },
-        { model: User, as: 'AssignedTo' },
-        { model: Phase, as: 'Phase' },
+        { model: Supplier, as: "Supplier" },
+        { model: User, as: "AssignedTo" },
+        { model: Phase, as: "Phase" },
       ],
     });
 
-    // Notifications (best-effort; don’t block creating)
+    // notifications (best-effort)
     try {
       if (item.assigned_to) {
         const assignedUser = await User.findByPk(item.assigned_to);
         if (assignedUser) {
-          await createNotification(
-            assignedUser.id,
-            'item_assigned',
-            `You have been assigned to item '${item.name}'.`,
-          );
+          await createNotification(assignedUser.id, "item_assigned", `You have been assigned to item '${item.name}'.`);
         }
       } else {
-        const notifyUsers = await User.findAll({
-          where: { role: { [Op.in]: ['admin', 'manager'] } },
-        });
+        const notifyUsers = await User.findAll({ where: { role: { [Op.in]: ["admin", "manager"] } } });
         for (const u of notifyUsers) {
-          await createNotification(
-            u.id,
-            'item_created',
-            `A new item '${item.name}' has been created.`,
-          );
+          await createNotification(u.id, "item_created", `A new item '${item.name}' has been created.`);
         }
       }
     } catch (notifyErr) {
-      console.warn('Notification error (non-fatal):', notifyErr?.message);
+      console.warn("Notification error (non-fatal):", notifyErr?.message);
     }
 
     res.status(201).json({ success: true, data: createdItem });
   } catch (error) {
-    console.error('Create item error:', error);
-    res
-      .status(500)
-      .json({ success: false, message: error?.message || 'Server error' });
+    console.error("Create item error:", error);
+    res.status(500).json({ success: false, message: error?.message || "Server error" });
   }
 });
 

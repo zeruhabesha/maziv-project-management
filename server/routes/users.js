@@ -1,23 +1,20 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import { Op } from "sequelize";
-import { authorizeRoles } from "../middleware/auth.js";
-import pkg from "../models/index.cjs";
-const { Project, Item, User, Alert } = pkg;
-import { createNotification, getUserNotifications, markNotificationRead } from "../services/notificationService.js";
-import { authenticateToken } from "../middleware/auth.js";
+import models from "../models/index.cjs";
+import { getUserNotifications, markNotificationRead } from "../services/notificationService.js";
+
 const router = express.Router();
+const { Project, Item, User, Alert } = models;
 
 // 🟢 Get all users
-router.get("/", async (req, res) => {
-    console.log('GET /api/users called');
-    try {
-        const users = await User.findAll();
-        res.json({ success: true, data: users });
-    } catch (error) {
-        console.error("Get users error:", error);
-        res.status(500).json({ success: false, message: "Server error" });
-    }
+router.get('/', async (req, res, next) => {
+  try {
+    const users = await User.findAll();
+    res.json(users);
+  } catch (err) {
+    next(err);
+  }
 });
 
 // 🟢 Create user (admins only)

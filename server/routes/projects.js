@@ -1,30 +1,24 @@
 import express from "express";
-import { authorizeRoles, authenticateToken } from "../middleware/auth.js";
 import multer from "multer";
-import path from "path";
-import fs from "fs";
-import pkg from "../models/index.cjs";
-const { Item, Supplier, User, Phase, Project } = pkg;
-import { Op } from 'sequelize';
+import path from "node:path";
+import fs from "node:fs";
+import { Op } from "sequelize";
+import models from "../models/index.cjs";
 import { createNotification, getUserNotifications } from "../services/notificationService.js";
 import { createAlert } from "../services/alertService.js";
-const router = express.Router();
 
-// Set up multer storage
+const router = express.Router();
+const { Item, Supplier, User, Phase, Project } = models;
+
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = path.join(process.cwd(), 'server', 'uploads', 'projects');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(process.cwd(), "server", "uploads", "projects");
+    fs.mkdirSync(uploadDir, { recursive: true });
     cb(null, uploadDir);
   },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
 });
-
-const upload = multer({ storage: storage });
+const upload = multer({ storage });
 
 // Get all projects
 router.get("/", async (req, res) => {

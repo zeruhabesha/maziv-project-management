@@ -2,20 +2,18 @@
   "name": "maziv-backend",
   "version": "1.0.0",
   "description": "Maziv Project Management Backend",
-  "main": "app.js",
   "type": "module",
+  "main": "app.js",
   "private": true,
-  "engines": {
-    "node": ">=20.0.0"
+  "engines": { "node": ">=20.0.0" },
+  "scripts": {
+    "start": "node app.js",
+    "dev": "NODE_ENV=development nodemon app.js",
+    "migrate": "npx sequelize-cli db:migrate",
+    "migrate:undo": "npx sequelize-cli db:migrate:undo",
+    "migrate:reset": "npx sequelize-cli db:migrate:undo:all && npm run migrate",
+    "deploy": "npm run migrate && npm start"
   },
- "scripts": {
-  "start": "node --experimental-modules --es-module-specifier-resolution=node --unhandled-rejections=strict ./app.js",
-  "dev": "NODE_ENV=development nodemon app.js",
-  "migrate": "npx sequelize-cli db:migrate",
-  "migrate:undo": "npx sequelize-cli db:migrate:undo",
-  "migrate:reset": "npx sequelize-cli db:migrate:undo:all && npm run migrate",
-  "deploy": "npm run migrate && npm start"
-},
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "compression": "^1.7.4",

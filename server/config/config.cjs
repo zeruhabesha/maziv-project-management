@@ -7,7 +7,8 @@ module.exports = {
     database: process.env.DB_NAME || 'maziv_project',
     host: process.env.DB_HOST || 'dpg-d2neh77diees73cicfl0-a.oregon-postgres.render.com',
     port: Number(process.env.DB_PORT || 5432),
-    dialect: 'postgres'
+    dialect: 'postgres',
+     logging: false,
   },
   test: {
     username: process.env.DB_USER || 'maziv_user',
@@ -18,6 +19,10 @@ module.exports = {
     dialect: 'postgres'
   },
   production: {
+    username: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME,
+    host: process.env.DB_HOST,
     use_env_variable: 'DATABASE_URL',
     dialect: 'postgres',
     dialectOptions: {
