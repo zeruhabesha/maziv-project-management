@@ -21,6 +21,39 @@ import { checkDeadlines } from "./services/alertService.js";
 
 // Load environment variables first
 dotenv.config();
+// Ensure database is initialized
+const initializeDatabase = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Database connection has been established successfully.');
+
+    if (process.env.NODE_ENV === 'production') {
+      console.log('🔄 Running migrations in production...');
+      const { execSync } = require('child_process');
+      execSync('npm run migrate', { stdio: 'inherit' });
+    } else {
+      console.log('🔄 Syncing database in development mode...');
+      await sequelize.sync({ alter: true });
+    }
+
+    console.log('✅ Database synchronized successfully.');
+  } catch (error) {
+    console.error('❌ Unable to initialize database:', error);
+    process.exit(1);
+  }
+};
+
+// Initialize database before starting the server
+initializeDatabase().then(() => {
+  // Start your server here
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}).catch(error => {
+  console.error('Failed to initialize database:', error);
+  process.exit(1);
+});
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
