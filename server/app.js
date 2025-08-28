@@ -27,7 +27,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const PORT = process.env.PORT || 10000;
 
 app.set('trust proxy', 1);
-
+app.get("/", (req, res) => {
+  res.send("Maziv Project Management API is running.");
+});
 app.use('/uploads/items', express.static(path.join(process.cwd(), 'server', 'uploads', 'items')));
 app.use('/uploads/projects', express.static(path.join(process.cwd(), 'server', 'uploads', 'projects')));
 
