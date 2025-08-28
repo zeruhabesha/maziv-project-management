@@ -9,12 +9,11 @@
     "node": ">=20.0.0"
   },
  "scripts": {
+  "start": "node --experimental-modules --es-module-specifier-resolution=node --unhandled-rejections=strict ./app.js",
+  "dev": "NODE_ENV=development nodemon app.js",
   "migrate": "npx sequelize-cli db:migrate",
   "migrate:undo": "npx sequelize-cli db:migrate:undo",
   "migrate:reset": "npx sequelize-cli db:migrate:undo:all && npm run migrate",
-  "start": "node --experimental-modules --es-module-specifier-resolution=node ./app.js",
-  "dev": "NODE_ENV=development nodemon app.js",
-  "init-db": "node config/init-db.js",
   "deploy": "npm run migrate && npm start"
 },
   "dependencies": {

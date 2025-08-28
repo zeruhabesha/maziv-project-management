@@ -7,9 +7,10 @@ import dotenv from "dotenv";
 import cron from "node-cron";
 import path from "path";
 import rateLimit from 'express-rate-limit';
+import { sequelize } from './config/database.cjs';  // Make sure this path is correct
 
 import pkg from "./config/database.cjs";
-const { sequelize, connectDB } = pkg;
+const { connectDB } = pkg;
 import { authenticateToken } from "./middleware/auth.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import * as authRoutes from "./routes/auth.js";
@@ -24,13 +25,19 @@ dotenv.config();
 // Ensure database is initialized
 const initializeDatabase = async () => {
   try {
+    // Test the connection
     await sequelize.authenticate();
     console.log('✅ Database connection has been established successfully.');
 
     if (process.env.NODE_ENV === 'production') {
       console.log('🔄 Running migrations in production...');
       const { execSync } = require('child_process');
-      execSync('npm run migrate', { stdio: 'inherit' });
+      try {
+        execSync('npx sequelize-cli db:migrate', { stdio: 'inherit' });
+      } catch (migrateError) {
+        console.error('❌ Migration failed:', migrateError);
+        throw migrateError;
+      }
     } else {
       console.log('🔄 Syncing database in development mode...');
       await sequelize.sync({ alter: true });
@@ -44,16 +51,16 @@ const initializeDatabase = async () => {
 };
 
 // Initialize database before starting the server
-initializeDatabase().then(() => {
-  // Start your server here
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
-}).catch(error => {
-  console.error('Failed to initialize database:', error);
-  process.exit(1);
-});
+// initializeDatabase().then(() => {
+//   // Start your server here
+//   const PORT = process.env.PORT || 3000;
+//   app.listen(PORT, () => {
+//     console.log(`Server running on port ${PORT}`);
+//   });
+// }).catch(error => {
+//   console.error('Failed to initialize database:', error);
+//   process.exit(1);
+// });
 
 const app = express();
 const isProduction = process.env.NODE_ENV === 'production';

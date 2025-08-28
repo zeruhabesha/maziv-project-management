@@ -1,16 +1,27 @@
 const { Sequelize } = require('sequelize');
 const dotenv = require('dotenv');
 const configJson = require('./config.json');
-dotenv.config();
+// dotenv.config();
+const config = require('./config');
 
 const env = process.env.NODE_ENV || 'development';
-const config = configJson[env];
+const dbConfig = config[env];
 
 if (!config) {
   throw new Error(`No database configuration found for environment: ${env}`);
 }
 
-let sequelize;
+const sequelize = new Sequelize(
+  dbConfig.database,
+  dbConfig.username,
+  dbConfig.password,
+  {
+    host: dbConfig.host,
+    dialect: dbConfig.dialect,
+    dialectOptions: dbConfig.dialectOptions,
+    logging: console.log
+  }
+);
 
 // Helper function to parse database URL
 // filepath: c:\Maziv\maziv-project-management\server\config\database.cjs
@@ -261,3 +272,5 @@ module.exports = {
   // Add a method to check if database is initialized
   isInitialized: () => dbState.isInitialized
 };
+
+module.exports = { sequelize };
