@@ -1,50 +1,44 @@
 'use strict';
 
 /**
- * Adds a "role" column to the Users table (supports either "users" or "Users").
- * Default: 'user' | ENUM('admin','manager','user')
+ * Adds a "role" column to Users table (supports "users" or "Users").
+ * Uses ENUM('admin','manager','user'), default 'user'.
  *
- * Works around case-sensitivity by probing which table exists.
+ * Idempotent:
+ *  - Skips add if column already exists
+ *  - Creates enum type only if missing
+ *  - Works regardless of table casing
  */
 
+/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // 1) Detect actual table casing
-    const [{ exists_lower }] = await queryInterface.sequelize.query(
-      `SELECT to_regclass('public.users') AS exists_lower;`,
-      { type: Sequelize.QueryTypes.SELECT }
-    );
-    const [{ exists_upper }] = await queryInterface.sequelize.query(
-      `SELECT to_regclass('public."Users"') AS exists_upper;`,
-      { type: Sequelize.QueryTypes.SELECT }
-    );
+    // Resolve actual table name by probing both casings
+    const resolveTable = async () => {
+      try { await queryInterface.describeTable('Users'); return 'Users'; } catch {}
+      try { await queryInterface.describeTable('users'); return 'users'; } catch {}
+      throw new Error('Users table not found (tried "Users" and users)');
+    };
 
-    const tableName = exists_lower ? 'users' : exists_upper ? 'Users' : null;
-    if (!tableName) {
-      throw new Error(`Users table not found (tried public.users and public."Users").`);
-    }
+    const tableName = await resolveTable();
+    const tableRef  = { tableName, schema: 'public' };
 
-    // 2) Add the role column (ENUM). We pass schema-qualified table ref for safety.
-    const tableRef = { tableName, schema: 'public' };
+    // If the column already exists, no-op
+    const columns = await queryInterface.describeTable(tableRef);
+    if (columns.role) return;
 
-    // Create enum type explicitly to avoid name collisions in some setups
-    // Type name follows Sequelize's default naming: enum_<table>_<column>
+    // Ensure enum type exists before adding column
     const enumTypeName = `enum_${tableName}_role`;
+    await queryInterface.sequelize.query(
+      `DO $$
+       BEGIN
+         IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = '${enumTypeName}') THEN
+           CREATE TYPE "${enumTypeName}" AS ENUM ('admin','manager','user');
+         END IF;
+       END$$;`
+    );
 
-    // Create type if not exists (Postgres 9.6+ doesn't support IF NOT EXISTS; we guard with try/catch)
-    try {
-      await queryInterface.sequelize.query(
-        `DO $$
-         BEGIN
-           IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = '${enumTypeName}') THEN
-             CREATE TYPE "${enumTypeName}" AS ENUM ('admin','manager','user');
-           END IF;
-         END$$;`
-      );
-    } catch (e) {
-      // If it already exists, continue
-    }
-
+    // Finally add the column (ENUM)
     await queryInterface.addColumn(tableRef, 'role', {
       type: Sequelize.ENUM('admin', 'manager', 'user'),
       allowNull: false,
@@ -53,34 +47,33 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // Detect table casing again
-    const [{ exists_lower }] = await queryInterface.sequelize.query(
-      `SELECT to_regclass('public.users') AS exists_lower;`,
-      { type: Sequelize.QueryTypes.SELECT }
-    );
-    const [{ exists_upper }] = await queryInterface.sequelize.query(
-      `SELECT to_regclass('public."Users"') AS exists_upper;`,
-      { type: Sequelize.QueryTypes.SELECT }
-    );
+    // Resolve table name again
+    const resolveTable = async () => {
+      try { await queryInterface.describeTable('Users'); return 'Users'; } catch {}
+      try { await queryInterface.describeTable('users'); return 'users'; } catch {}
+      return null;
+    };
 
-    const tableName = exists_lower ? 'users' : exists_upper ? 'Users' : null;
-    if (!tableName) return; // nothing to do
-
-    const tableRef = { tableName, schema: 'public' };
+    const tableName = await resolveTable();
+    if (!tableName) return; // nothing to do if table not found
+    const tableRef  = { tableName, schema: 'public' };
 
     // Remove column if present
     try {
-      await queryInterface.removeColumn(tableRef, 'role');
-    } catch (e) {
-      // ignore if it wasn't added
+      const columns = await queryInterface.describeTable(tableRef);
+      if (columns.role) {
+        await queryInterface.removeColumn(tableRef, 'role');
+      }
+    } catch (_) {
+      // ignore (column may not exist)
     }
 
-    // Drop possible enum types to keep schema clean (cover both casings)
-    const candidates = [
-      `enum_${tableName}_role`, // the type we probably used
-      `enum_users_role`,
-      `enum_Users_role`,
-    ];
+    // Drop possible enum types to keep schema clean
+    const candidates = new Set([
+      `enum_${tableName}_role`,
+      'enum_users_role',
+      'enum_Users_role',
+    ]);
 
     for (const t of candidates) {
       await queryInterface.sequelize.query(
@@ -92,5 +85,5 @@ module.exports = {
          END$$;`
       );
     }
-  },
+  }
 };
