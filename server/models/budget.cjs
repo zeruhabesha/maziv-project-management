@@ -1,37 +1,23 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+// server/models/budget.cjs
 module.exports = (sequelize, DataTypes) => {
-  class Budget extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // define association here
-      Budget.belongsTo(models.Project, { foreignKey: 'project_id', as: 'Project' });
-    }
-  }
-  Budget.init({
-    project_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      validate: {
-        notNull: { msg: 'Project ID cannot be null' }
-      }
-    },
-    category: DataTypes.STRING,
-    budgeted_amount: DataTypes.DECIMAL(15, 2),
-    actual_amount: {
-      type: DataTypes.DECIMAL(15, 2),
-      defaultValue: 0
-    }
+  const Budget = sequelize.define('Budget', {
+    id:         { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    project_id: { type: DataTypes.INTEGER, allowNull: false },
+    category:   { type: DataTypes.STRING },      // e.g., materials, labor, logistics
+    amount:     { type: DataTypes.DECIMAL, allowNull: false, defaultValue: 0 },
+    notes:      { type: DataTypes.TEXT },
+    createdAt:  { type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.literal('NOW()') },
+    updatedAt:  { type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.literal('NOW()') },
   }, {
-    sequelize,
-    modelName: 'Budget',
-    tableName: 'budgets',
+    tableName: 'Budgets',            // ensure your migration matches this table name
+    freezeTableName: true,
+    schema: 'public',
+    timestamps: true,
   });
+
+  Budget.associate = (models) => {
+    Budget.belongsTo(models.Project, { foreignKey: 'project_id', as: 'Project', onUpdate: 'CASCADE', onDelete: 'CASCADE' });
+  };
+
   return Budget;
 };

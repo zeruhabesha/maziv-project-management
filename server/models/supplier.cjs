@@ -1,29 +1,25 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+// server/models/supplier.cjs
 module.exports = (sequelize, DataTypes) => {
-  class Supplier extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
-    static associate(models) {
-      // define association here
-      Supplier.hasMany(models.Item, { foreignKey: 'supplier_id', as: 'Items' });
-    }
-  }
-  Supplier.init({
-    company: DataTypes.STRING, // <-- this should match the column name in your DB
-    contact_name: DataTypes.STRING,
-    phone: DataTypes.STRING,
-    email: DataTypes.STRING,
-    address: DataTypes.TEXT
+  const Supplier = sequelize.define('Supplier', {
+    id:           { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name:         { type: DataTypes.STRING, allowNull: false },
+    company:      { type: DataTypes.STRING },
+    contact_name: { type: DataTypes.STRING },
+    email:        { type: DataTypes.STRING },
+    phone:        { type: DataTypes.STRING },
+    address:      { type: DataTypes.STRING },
+    createdAt:    { type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.literal('NOW()') },
+    updatedAt:    { type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.literal('NOW()') },
   }, {
-    sequelize,
-    modelName: 'Supplier',
-    tableName: 'suppliers',
+    tableName: 'Suppliers',
+    freezeTableName: true,
+    schema: 'public',
+    timestamps: true,
   });
+
+  Supplier.associate = (models) => {
+    Supplier.hasMany(models.Item, { foreignKey: 'supplier_id', as: 'Items', onUpdate: 'SET NULL', onDelete: 'SET NULL' });
+  };
+
   return Supplier;
 };

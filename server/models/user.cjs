@@ -1,57 +1,26 @@
-'use strict';
-const { Model } = require('sequelize');
+// server/models/user.cjs
 module.exports = (sequelize, DataTypes) => {
-  class User extends Model {
-    static associate(models) {
-      User.hasMany(models.Item, { foreignKey: 'assigned_to', as: 'AssignedItems' });
-      // add other associations if needed
-    }
-  }
-  User.init({
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notNull: { msg: 'Name cannot be null' },
-        notEmpty: { msg: 'Name cannot be empty' }
-      }
-    },
-    email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-      validate: {
-        isEmail: { msg: 'Invalid email format' },
-        notNull: { msg: 'Email cannot be null' },
-        notEmpty: { msg: 'Email cannot be empty' }
-      }
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notNull: { msg: 'Password cannot be null' },
-        notEmpty: { msg: 'Password cannot be empty' },
-        len: { args: [8], msg: 'Password must be at least 8 characters long' }
-      }
-    },
-    role: {
-      type: DataTypes.STRING,
-      defaultValue: 'user',
-      validate: {
-        isIn: { args: [['user', 'admin', 'manager']], msg: 'Invalid role' }
-      }
-    },
-    manager_ids: {
-      type: DataTypes.STRING,
-      allowNull: true
-    }
+  const User = sequelize.define('User', {
+    id:         { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+    name:       { type: DataTypes.STRING, allowNull: false },
+    email:      { type: DataTypes.STRING, allowNull: false, unique: true },
+    password:   { type: DataTypes.STRING, allowNull: false },
+    role:       { type: DataTypes.ENUM('admin', 'manager', 'user'), allowNull: false, defaultValue: 'user' },
+    createdAt:  { type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.literal('NOW()') },
+    updatedAt:  { type: DataTypes.DATE, allowNull: false, defaultValue: sequelize.literal('NOW()') },
   }, {
-    sequelize,
-    modelName: 'User',
-tableName: 'users',
-    underscored: true,
-    timestamps: true
+    tableName: 'Users',
+    freezeTableName: true,
+    schema: 'public',
+    timestamps: true,
+    underscored: false,
   });
+
+  User.associate = (models) => {
+    User.hasMany(models.Item,         { foreignKey: 'assigned_to', as: 'AssignedItems', onUpdate: 'SET NULL', onDelete: 'SET NULL' });
+    User.hasMany(models.Notification, { foreignKey: 'user_id',     as: 'Notifications', onUpdate: 'CASCADE', onDelete: 'CASCADE' });
+    User.hasMany(models.Alert,        { foreignKey: 'user_id',     as: 'Alerts',        onUpdate: 'CASCADE', onDelete: 'SET NULL' });
+  };
+
   return User;
 };
