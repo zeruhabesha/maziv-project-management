@@ -1,0 +1,23 @@
+// config/config.js (ESM)
+export default {
+  development: {
+    username: "maziv_user",
+    password: "Y0x1lLB1r8AI8oLmOQ009R3ej0eVY4I7",
+    database: "maziv_project",
+    host: "dpg-d2neh77diees73cicfl0-a.oregon-postgres.render.com",
+    port: 5432,
+    dialect: "postgres"
+  },
+  test: { /* same as above */ },
+  production: {
+    username: "maziv_user",
+    password: "Y0x1lLB1r8AI8oLmOQ009R3ej0eVY4I7",
+    database: "maziv_project",
+    host: "dpg-d2neh77diees73cicfl0-a.oregon-postgres.render.com",
+    port: 5432,
+    dialect: "postgres",
+    dialectOptions: {
+      ssl: { require: true, rejectUnauthorized: false }
+    }
+  }
+};

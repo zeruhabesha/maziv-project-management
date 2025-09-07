@@ -1,13 +1,26 @@
 'use strict';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('projects', 'file', {
-      type: Sequelize.STRING,
-      allowNull: true
-    });
+  async up(qi, Sequelize) {
+    const table =
+      (await qi.describeTable('Projects').then(()=> 'Projects').catch(()=> null)) ||
+      (await qi.describeTable('projects').then(()=> 'projects').catch(()=> null));
+    if (!table) throw new Error('Projects table not found');
+
+    const cols = await qi.describeTable(table);
+    if (!cols.file) {
+      await qi.addColumn({ tableName: table, schema: 'public' }, 'file', {
+        type: Sequelize.STRING, allowNull: true,
+      });
+    }
   },
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn('projects', 'file');
+
+  async down(qi) {
+    const table =
+      (await qi.describeTable('Projects').then(()=> 'Projects').catch(()=> null)) ||
+      (await qi.describeTable('projects').then(()=> 'projects').catch(()=> null));
+    if (!table) return;
+    const cols = await qi.describeTable(table);
+    if (cols.file) await qi.removeColumn({ tableName: table, schema: 'public' }, 'file');
   }
-}; 
+};

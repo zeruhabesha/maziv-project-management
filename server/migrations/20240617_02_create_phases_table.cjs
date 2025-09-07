@@ -1,45 +1,28 @@
-"use strict";
+'use strict';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable("phases", {
-      id: {
-        allowNull: false,
-        autoIncrement: true,
-        primaryKey: true,
-        type: Sequelize.INTEGER,
-      },
-      project_id: {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        references: { model: "projects", key: "id" },
-        onDelete: "CASCADE",
-      },
-      name: {
-        type: Sequelize.STRING,
-        allowNull: false,
-      },
-      description: Sequelize.TEXT,
-      start_date: Sequelize.DATE,
-      end_date: Sequelize.DATE,
-      status: {
-        type: Sequelize.ENUM('not_started', 'in_progress', 'completed', 'on_hold', 'cancelled'),
-        defaultValue: 'not_started',
-      },
-      createdAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('NOW'),
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.fn('NOW'),
-      },
+  async up(qi, Sequelize) {
+    const exists =
+      (await qi.describeTable('Phases').then(()=> 'Phases').catch(()=> null)) ||
+      (await qi.describeTable('phases').then(()=> 'phases').catch(()=> null));
+    if (exists) return;
+
+    const target = 'Phases';
+    await qi.createTable(target, {
+      id:             { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+      name:           { type: Sequelize.STRING, allowNull: false },
+      sequence_order: { type: Sequelize.INTEGER, allowNull: true }, // later migration can set/default it
+      createdAt:      { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
+      updatedAt:      { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
     });
+
+    await qi.addIndex(target, ['sequence_order']);
   },
 
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable("phases");
-  },
-}; 
+  async down(qi) {
+    const t =
+      (await qi.describeTable('Phases').then(()=> 'Phases').catch(()=> null)) ||
+      (await qi.describeTable('phases').then(()=> 'phases').catch(()=> null));
+    if (t) await qi.dropTable(t);
+  }
+};

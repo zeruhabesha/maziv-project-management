@@ -1,56 +1,36 @@
 'use strict';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.createTable('projects', {
-      id: {
-        allowNull: false,
-        autoIncrement: true,
-        primaryKey: true,
-        type: Sequelize.INTEGER
-      },
-      name: {
-        type: Sequelize.STRING,
-        allowNull: false
-      },
-      ref_no: {
-        type: Sequelize.STRING,
-        unique: true
-      },
-      start_date: {
-        type: Sequelize.DATE
-      },
-      end_date: {
-        type: Sequelize.DATE
-      },
-      client: {
-        type: Sequelize.STRING
-      },
-      manager_ids: {
-        type: Sequelize.ARRAY(Sequelize.INTEGER)
-      },
-      description: {
-        type: Sequelize.TEXT
-      },
-      tender_value: {
-        type: Sequelize.DECIMAL(15, 2)
-      },
-      status: {
-        type: Sequelize.ENUM('planning', 'active', 'completed', 'on_hold', 'cancelled'),
-        defaultValue: 'planning'
-      },
-      createdAt: {
-        allowNull: false,
-        type: Sequelize.DATE
-      },
-      updatedAt: {
-        allowNull: false,
-        type: Sequelize.DATE
-      }
+  async up(qi, Sequelize) {
+    const exists =
+      (await qi.describeTable('Projects').then(()=> 'Projects').catch(()=> null)) ||
+      (await qi.describeTable('projects').then(()=> 'projects').catch(()=> null));
+    if (exists) return;
+
+    const target = 'Projects';
+    await qi.createTable(target, {
+      id:            { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
+      name:          { type: Sequelize.STRING, allowNull: false },
+      client:        { type: Sequelize.STRING, allowNull: true },
+      status:        { type: Sequelize.STRING, allowNull: false, defaultValue: 'active' },
+      tender_value:  { type: Sequelize.DECIMAL, allowNull: true, defaultValue: 0 },
+      start_date:    { type: Sequelize.DATE, allowNull: true },
+      end_date:      { type: Sequelize.DATE, allowNull: true },
+      manager_ids:   { type: Sequelize.ARRAY(Sequelize.INTEGER), allowNull: true, defaultValue: [] },
+      file:          { type: Sequelize.STRING, allowNull: true },
+      createdAt:     { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
+      updatedAt:     { type: Sequelize.DATE, allowNull: false, defaultValue: Sequelize.fn('NOW') },
     });
+
+    await qi.addIndex(target, ['status']);
+    await qi.addIndex(target, ['client']);
+    await qi.addIndex(target, ['end_date']);
   },
-  down: async (queryInterface, Sequelize) => {
-    await queryInterface.dropTable('projects');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_projects_status";');
+
+  async down(qi) {
+    const t =
+      (await qi.describeTable('Projects').then(()=> 'Projects').catch(()=> null)) ||
+      (await qi.describeTable('projects').then(()=> 'projects').catch(()=> null));
+    if (t) await qi.dropTable(t);
   }
-}; 
+};
