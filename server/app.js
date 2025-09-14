@@ -25,18 +25,51 @@ import errorHandler from './middleware/errorHandler.js';
     // 1) Initialize DB
     await initializeDatabase();
 
-    // 2) Setup app
+      // 2) Setup app
     const app = express();
-  // In server/app.js, update the CORS configuration
-app.use(cors({
-  origin: [
-    'http://localhost:5173', // Local development
-    'http://localhost:3000', // Alternative local
-    'https://your-vercel-app.vercel.app', // Replace with your actual Vercel URL
-    'https://maziv-project-management.vercel.app' // If this is your domain
-  ],
-  credentials: true
-}));
+
+    // Enhanced CORS configuration
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://maziv-project-management.vercel.app',
+      'https://maziv-project-management.vercel.app/'
+    ];
+
+    // Add request logging middleware
+    app.use((req, res, next) => {
+      console.log('=== Incoming Request ===');
+      console.log('Method:', req.method);
+      console.log('URL:', req.originalUrl);
+      console.log('Origin:', req.headers.origin);
+      console.log('Headers:', req.headers);
+      console.log('========================');
+      next();
+    });
+
+    // Configure CORS with dynamic origin check
+    app.use(cors({
+      origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        // Check if the origin is allowed
+        if (allowedOrigins.includes(origin) || 
+            allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/+$/, '')))) {
+          return callback(null, true);
+        }
+        
+        console.log('Blocked by CORS:', origin);
+        return callback(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
+      exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    }));
+
+    // Handle preflight requests
+    app.options('*', cors());
 
     app.use(helmet());
     app.use(express.json({ limit: '10mb' }));

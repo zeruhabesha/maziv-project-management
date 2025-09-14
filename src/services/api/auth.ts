@@ -6,7 +6,7 @@ export const login = async (credentials: { email: string; password: string }) =>
     console.log('Auth API: login called with email:', credentials.email);
     console.log('Auth API: baseURL:', api.defaults.baseURL);
     
-    const response = await api.post('/api/auth/login', credentials);
+    const response = await api.post('/auth/login', credentials);
     console.log('Auth API: login successful');
     return response;
   } catch (error: any) {
@@ -24,7 +24,7 @@ export const login = async (credentials: { email: string; password: string }) =>
 export const register = async (userData: { name: string; email: string; password: string; role?: string }) => {
   try {
     console.log('Auth API: register called for email:', userData.email);
-    const response = await api.post('/api/auth/register', userData);
+    const response = await api.post('/auth/register', userData);
     console.log('Auth API: registration successful');
     return response;
   } catch (error: unknown) {
@@ -52,7 +52,7 @@ export const register = async (userData: { name: string; email: string; password
 export const getCurrentUser = async () => {
   try {
     console.log('Auth API: getCurrentUser called');
-    const response = await api.get('/api/auth/me');
+    const response = await api.get('/auth/me');
     console.log('Auth API: getCurrentUser successful');
     return response;
   } catch (error: any) {

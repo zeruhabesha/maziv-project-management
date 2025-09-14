@@ -1,9 +1,22 @@
 import axios from 'axios';
 
-// Determine the correct API base URL
+// Always use the Render backend URL
 const getApiBaseUrl = () => {
-  // Get the base URL from environment or use production URL
+  // In production, use the Render backend URL directly
+  // In development, use the Vite proxy if available, otherwise fallback to Render
   let baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com';
+  
+  // Ensure we have the full URL with https://
+  if (!baseUrl.startsWith('http')) {
+    baseUrl = `https://${baseUrl}`;
+  }
+  
+  // Ensure we have the /api prefix
+  if (!baseUrl.endsWith('/api')) {
+    baseUrl = baseUrl.endsWith('/') 
+      ? `${baseUrl}api` 
+      : `${baseUrl}/api`;
+  }
   
   // Remove any trailing slashes
   baseUrl = baseUrl.replace(/\/+$/, '');
@@ -14,16 +27,82 @@ const getApiBaseUrl = () => {
 };
 
 // Create axios instance with default config
-// Configure axios instance
 export const api = axios.create({
   baseURL: getApiBaseUrl(),
   timeout: 30000, // 30 second timeout
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
   },
   withCredentials: true, // Important for cookies/auth
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
 });
+
+// Add a response interceptor to handle 401 responses
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      // Handle unauthorized (e.g., redirect to login)
+      console.error('Unauthorized - redirecting to login');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Add request interceptor for logging
+api.interceptors.request.use(
+  (config) => {
+    console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
+      baseURL: config.baseURL,
+      params: config.params,
+      data: config.data,
+    });
+    return config;
+  },
+  (error) => {
+    console.error('[API Request Error]', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for logging and error handling
+api.interceptors.response.use(
+  (response) => {
+    console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
+      status: response.status,
+      data: response.data,
+    });
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      console.error('[API Response Error]', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data,
+        requestData: error.config?.data,
+      });
+    } else if (error.request) {
+      // The request was made but no response was received
+      console.error('[API No Response]', {
+        url: error.config?.url,
+        method: error.config?.method,
+        message: 'No response received from server',
+      });
+    } else {
+      // Something happened in setting up the request
+      console.error('[API Request Setup Error]', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Log the final configuration
 console.log('API Configuration:', {
