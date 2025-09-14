@@ -40,6 +40,15 @@ export const api = axios.create({
   xsrfHeaderName: 'X-XSRF-TOKEN',
 });
 
+// Add request interceptor to ensure consistent URL formatting
+api.interceptors.request.use(config => {
+  // Remove any double slashes that might occur in the URL
+  if (config.url) {
+    config.url = config.url.replace(/([^:]\/)\/+/g, '$1');
+  }
+  return config;
+});
+
 // Add a response interceptor to handle 401 responses
 api.interceptors.response.use(
   response => response,

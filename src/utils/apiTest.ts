@@ -1,6 +1,9 @@
 // Utility to test API configuration
 export const testApiConnection = async () => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com';
+  // Ensure base URL doesn't end with /api to prevent double /api in the path
+  let baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com';
+  baseUrl = baseUrl.replace(/\/api\/?$/, ''); // Remove any trailing /api
+  
   const healthEndpoint = '/api/health';
   const healthUrl = baseUrl.endsWith('/') 
     ? `${baseUrl}${healthEndpoint.replace(/^\//, '')}`

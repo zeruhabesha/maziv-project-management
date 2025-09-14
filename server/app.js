@@ -65,7 +65,15 @@ import errorHandler from './middleware/errorHandler.js';
       credentials: true,
       exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      allowedHeaders: [
+        'Content-Type', 
+        'Authorization', 
+        'X-Requested-With',
+        'Cache-Control',
+        'Pragma'
+      ],
+      preflightContinue: false,
+      optionsSuccessStatus: 204
     }));
 
     // Handle preflight requests
