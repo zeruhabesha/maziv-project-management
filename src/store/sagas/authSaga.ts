@@ -46,17 +46,18 @@ function* loginSaga(action: PayloadAction<{ email: string; password: string }>):
       throw new Error('Invalid response from server');
     }
     
-    // Handle different response structures
-    let user, token;
-    if (response.data.data) {
-      // Response has { data: { user, token } } structure
-      ({ user, token } = response.data.data);
-    } else if (response.data.user && response.data.token) {
-      // Response has { user, token } structure
-      ({ user, token } = response.data);
-    } else {
-      console.error('Unexpected response structure:', response.data);
-      throw new Error('Unexpected response structure from server');
+    // Handle the response structure from the API
+    // Expected structure: { success: true, data: { user: {...}, token: '...' } }
+    if (!response.data.success || !response.data.data) {
+      console.error('Invalid response structure:', response.data);
+      throw new Error('Invalid response from server');
+    }
+    
+    const { user, token } = response.data.data;
+    
+    if (!user || !token) {
+      console.error('Missing user or token in response:', response.data);
+      throw new Error('Incomplete response from server');
     }
     
     if (!token) {
