@@ -1,29 +1,29 @@
 import axios from 'axios';
 
-// Always use the Render backend URL
+// Get the base URL for API requests
 const getApiBaseUrl = () => {
-  // In production, use the Render backend URL directly
-  // In development, use the Vite proxy if available, otherwise fallback to Render
-  let baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com';
-  
-  // Ensure we have the full URL with https://
-  if (!baseUrl.startsWith('http')) {
-    baseUrl = `https://${baseUrl}`;
+  // In production, always use the Render backend URL
+  if (import.meta.env.PROD) {
+    return 'https://maziv-project-management.onrender.com/api';
   }
+  
+  // In development, use the Vite proxy if available, otherwise use the full URL
+  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:10000';
+  
+  // Ensure we have the full URL with protocol
+  let url = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
   
   // Ensure we have the /api prefix
-  if (!baseUrl.endsWith('/api')) {
-    baseUrl = baseUrl.endsWith('/') 
-      ? `${baseUrl}api` 
-      : `${baseUrl}/api`;
+  if (!url.endsWith('/api')) {
+    url = url.endsWith('/') ? `${url}api` : `${url}/api`;
   }
   
-  // Remove any trailing slashes
-  baseUrl = baseUrl.replace(/\/+$/, '');
+  // Remove any double slashes
+  url = url.replace(/([^:]\/)\/+/g, '$1');
   
   // Log the final URL for debugging
-  console.log('Using API base URL:', baseUrl);
-  return baseUrl;
+  console.log('Using API base URL:', url);
+  return url;
 };
 
 // Create axios instance with default config

@@ -9,24 +9,39 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '/api': {
+      '^/api/.*': {
         target: 'https://maziv-project-management.onrender.com',
         changeOrigin: true,
         secure: true,
-        timeout: 30000,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
-            console.log('proxy error', err);
+            console.error('Proxy Error:', err);
           });
           proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Sending Request to the Target:', req.method, req.url);
+            console.log('API Request:', {
+              method: req.method,
+              url: req.url,
+              headers: req.headers,
+              body: req.body
+            });
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+            console.log('API Response:', {
+              statusCode: proxyRes.statusCode,
+              statusMessage: proxyRes.statusMessage,
+              url: req.url,
+              headers: proxyRes.headers
+            });
           });
         },
       }
-    }
+    },
+    host: true, // Listen on all network interfaces
+    port: 5173,
+    strictPort: true,
+    open: true
   },
   define: {
     // Ensure environment variables are available at build time
