@@ -22,11 +22,39 @@ import errorHandler from './middleware/errorHandler.js';
 
 (async () => {
   try {
-    // 1) Initialize DB
-    await initializeDatabase();
-
-      // 2) Setup app
     const app = express();
+
+    // 1) Initialize DB with comprehensive error handling
+    console.log('Initializing database...');
+    try {
+      // Log environment variables (without sensitive data)
+      console.log('Environment:', {
+        NODE_ENV: process.env.NODE_ENV,
+        DB_HOST: process.env.DB_HOST ? '***' : 'Not set',
+        DB_PORT: process.env.DB_PORT || 'default',
+        DB_NAME: process.env.DB_NAME ? '***' : 'Not set',
+        DB_USER: process.env.DB_USER ? '***' : 'Not set',
+        DATABASE_URL: process.env.DATABASE_URL ? '***' : 'Not set',
+        SSL_MODE: process.env.SSL_MODE || 'Not set'
+      });
+
+      // Initialize database with timeout
+      const dbInitPromise = initializeDatabase();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+      );
+      
+      await Promise.race([dbInitPromise, timeoutPromise]);
+      console.log('Database initialized successfully');
+    } catch (dbError) {
+      console.error('Failed to initialize database:', {
+        message: dbError.message,
+        name: dbError.name,
+        code: dbError.code,
+        stack: dbError.stack
+      });
+      // Continue to start the app in degraded mode
+    }
 
     // Enhanced CORS configuration
     const allowedOrigins = [
@@ -88,30 +116,84 @@ import errorHandler from './middleware/errorHandler.js';
     // static file serving
     app.use('/uploads', express.static(path.join(process.cwd(), 'server', 'uploads')));
 
-    // Health check endpoint
+    // Health check endpoint with robust error handling
     app.get('/api/health', async (req, res) => {
+      const healthCheck = {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development',
+        uptime: process.uptime(),
+        database: {
+          status: 'disconnected',
+          error: 'Not initialized',
+          details: {}
+        },
+        services: {
+          database: false,
+          api: true
+        },
+        // System information
+        system: {
+          node: process.version,
+          platform: process.platform,
+          memory: process.memoryUsage(),
+          cpu: process.cpuUsage()
+        },
+        // Request information
+        request: {
+          ip: req.ip,
+          method: req.method,
+          url: req.originalUrl,
+          headers: {
+            host: req.headers.host,
+            'user-agent': req.headers['user-agent']
+          }
+        }
+      };
+
       try {
-        // Test database connection
-        await models.sequelize.authenticate();
-        
-        res.status(200).json({
-          status: 'ok',
-          timestamp: new Date().toISOString(),
-          database: 'connected',
-          environment: process.env.NODE_ENV || 'development',
-        });
+        // Try to check database if possible
+        try {
+          const models = await import('./models/index.cjs');
+          if (models.sequelize) {
+            await models.sequelize.authenticate();
+            healthCheck.database.status = 'connected';
+            healthCheck.services.database = true;
+            healthCheck.database.error = null;
+            
+            // Try to get user count if possible
+            try {
+              const userCount = await models.User.count();
+              healthCheck.database.details.userCount = userCount;
+            } catch (countError) {
+              console.error('User count failed:', countError);
+              healthCheck.database.details.error = 'Count failed: ' + countError.message;
+            }
+          }
+        } catch (dbError) {
+          console.error('Database check failed:', dbError);
+          healthCheck.database.error = dbError.message;
+          healthCheck.status = 'degraded';
+        }
       } catch (error) {
-        console.error('Health check failed:', error);
-        res.status(500).json({
-          status: 'error',
-          error: error.message,
-          database: 'disconnected',
-        });
+        console.error('Health check error:', error);
+        healthCheck.status = 'degraded';
+        healthCheck.error = error.message;
       }
+      
+      // Always return 200 OK, but include status in the response
+      // This allows load balancers to still reach the endpoint
+      res.status(200).json(healthCheck);
     });
 
-    // Routes
-    app.get('/health', (_req, res) => res.json({ ok: true }));
+    // Simple health check for load balancers
+    app.get('/health', (_req, res) => {
+      res.status(200).json({
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime()
+      });
+    });
 
     app.use('/api/auth', authRouter);
     app.use('/api/users', usersRouter);

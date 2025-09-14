@@ -193,15 +193,51 @@ if (!sequelize) {
 
 async function initializeDatabase(options = {}) {
   const { devAlterSync = process.env.DB_SYNC_ALTER === "true" } = options;
+  
+  try {
+    console.log("🔍 Initializing database connection...");
+    console.log(`Environment: ${ENV}`);
+    
+    // Log database configuration (without sensitive data)
+    const config = sequelize.config;
+    console.log("Database config:", {
+      database: config.database,
+      host: config.host,
+      port: config.port,
+      username: config.username ? '***' : undefined,
+      dialect: config.dialect,
+      ssl: config.dialectOptions?.ssl || false,
+      pool: config.pool || {}
+    });
 
-  console.log("Initializing database connection...");
-  await sequelize.authenticate();
-  console.log("✅ Database connection OK");
+    // Test connection
+    console.log("Testing database connection...");
+    await sequelize.authenticate();
+    console.log("✅ Database connection OK");
 
-  if (ENV === "development" && devAlterSync) {
-    console.log("🔄 Dev sync with alter=true...");
-    await sequelize.sync({ alter: true });
-    console.log("✅ Dev sync completed");
+    // Only run sync in development
+    if (ENV === "development") {
+      if (devAlterSync) {
+        console.log("🔄 Running development sync with alter=true...");
+        await sequelize.sync({ alter: true });
+        console.log("✅ Development sync completed");
+      } else {
+        console.log("ℹ️ Database sync skipped (DB_SYNC_ALTER not set to 'true')");
+      }
+    } else {
+      console.log("ℹ️ Production environment - skipping sync");
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("❌ Database initialization failed:", {
+      name: error.name,
+      message: error.message,
+      code: error.original?.code,
+      sql: error.sql,
+      stack: error.stack
+    });
+    throw error; // Re-throw to allow handling by the caller
   }
 }
 
