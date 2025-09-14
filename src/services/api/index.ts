@@ -2,28 +2,35 @@ import axios from 'axios';
 
 // Determine the correct API base URL
 const getApiBaseUrl = () => {
-  // Always use the VITE_API_URL if it's set, otherwise fall back to production URL
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com/api';
+  // Get the base URL from environment or use production URL
+  let baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com';
   
-  // Remove any trailing slashes and add /api if not present
-  let url = baseUrl.replace(/\/+$/, '');
-  if (!url.endsWith('/api')) {
-    url += '/api';
-  }
+  // Remove any trailing slashes
+  baseUrl = baseUrl.replace(/\/+$/, '');
   
-  console.log('Using API base URL:', url);
-  return url;
+  // Log the final URL for debugging
+  console.log('Using API base URL:', baseUrl);
+  return baseUrl;
 };
 
 // Create axios instance with default config
+// Configure axios instance
 export const api = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 30000, // 30 second timeout for slow Render responses
+  timeout: 30000, // 30 second timeout
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
   withCredentials: true, // Important for cookies/auth
+});
+
+// Log the final configuration
+console.log('API Configuration:', {
+  baseURL: api.defaults.baseURL,
+  timeout: api.defaults.timeout,
+  withCredentials: api.defaults.withCredentials,
+  headers: api.defaults.headers
 });
 
 // Request interceptor to add auth token and handle request logging
