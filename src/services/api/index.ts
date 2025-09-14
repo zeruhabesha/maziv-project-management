@@ -4,7 +4,7 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL ||                 // <-- use env when provided
   (import.meta.env.MODE === 'development'
     ? '/api'                                      // vite proxy in dev
-    : 'https://maziv-project-management.onrender.com/api'); // prod fallback
+    : 'https://maziv-project-management.onrender.com/'); // prod fallback
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
