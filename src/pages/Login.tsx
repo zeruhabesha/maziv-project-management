@@ -31,6 +31,8 @@ const Login: React.FC = () => {
   }, [error, dispatch]);
 
   const onSubmit = (data: LoginForm) => {
+    console.log('Login form submitted:', { email: data.email });
+    console.log('Current API base URL:', import.meta.env.VITE_API_URL || 'default');
     dispatch(loginStart(data));
   };
   
