@@ -38,14 +38,15 @@ import errorHandler from './middleware/errorHandler.js';
         SSL_MODE: process.env.SSL_MODE || 'Not set'
       });
 
-      // Initialize database with timeout
+      // Initialize database with extended timeout for production
       const dbInitPromise = initializeDatabase();
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Database connection timeout')), 10000)
+        setTimeout(() => reject(new Error('Database connection timeout after 30 seconds')), 30000)
       );
       
+      console.log('Attempting to connect to the database...');
       await Promise.race([dbInitPromise, timeoutPromise]);
-      console.log('Database initialized successfully');
+      console.log('✅ Database connection established successfully');
     } catch (dbError) {
       console.error('Failed to initialize database:', {
         message: dbError.message,

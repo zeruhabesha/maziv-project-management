@@ -93,7 +93,36 @@ function buildConfigFromDiscreteEnv() {
 
 // Resolve final DB config
 function resolveDbConfig() {
-  // 1) DATABASE_URL (Render/Heroku)
+  // 1) First try config.json / config.cjs (with development/test/production keys)
+  const fileCfg = findConfigObject();
+  if (fileCfg && fileCfg[ENV]) {
+    console.log(`[DB] Using config for NODE_ENV="${ENV}" from file`);
+    const picked = fileCfg[ENV];
+
+    return {
+      database: picked.database,
+      username: picked.username,
+      password: picked.password,
+      host: picked.host,
+      port: picked.port,
+      dialect: picked.dialect || "postgres",
+      dialectOptions: picked.dialectOptions || {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      },
+      logging: process.env.DB_LOGGING === 'true',
+      pool: picked.pool || {
+        max: 10,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      }
+    };
+  }
+
+  // 2) DATABASE_URL (Render/Heroku)
   if (process.env.DATABASE_URL) {
     const sslOn =
       (process.env.PGSSL || "").toLowerCase() === "true" ||
@@ -109,32 +138,23 @@ function resolveDbConfig() {
       url: process.env.DATABASE_URL,
       dialect: "postgres",
       dialectOptions,
-      logging: false,
+      logging: process.env.DB_LOGGING === 'true',
     };
   }
 
-  // 2) Discrete env variables (DB_HOST, DB_USER, ...)
+  // 3) Fall back to discrete env variables (DB_HOST, DB_USER, ...)
   const envCfg = buildConfigFromDiscreteEnv();
   if (envCfg) {
     console.log("[DB] Using discrete DB_* environment variables");
-    return envCfg;
-  }
-
-  // 3) config.json / config.cjs (with development/test/production keys)
-  const fileCfg = findConfigObject();
-  if (fileCfg && fileCfg[ENV]) {
-    console.log(`[DB] Using config for NODE_ENV="${ENV}" from file`);
-    const picked = fileCfg[ENV];
-
     return {
-      database: picked.database,
-      username: picked.username,
-      password: picked.password,
-      host: picked.host,
-      port: picked.port,
-      dialect: picked.dialect || "postgres",
-      dialectOptions: picked.dialectOptions,
-      logging: false,
+      ...envCfg,
+      dialectOptions: envCfg.dialectOptions || {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false
+        }
+      },
+      logging: process.env.DB_LOGGING === 'true',
     };
   }
 
@@ -146,43 +166,56 @@ function resolveDbConfig() {
 let sequelize;
 
 function buildSequelize() {
-  const cfg = resolveDbConfig();
-  if (!cfg) {
-    throw new Error("No valid database configuration found");
-  }
-
-  if (cfg.url) {
-    sequelize = new Sequelize(cfg.url, {
-      dialect: cfg.dialect,
-      dialectOptions: cfg.dialectOptions,
-      logging: cfg.logging,
-      pool: {
-        max: Number(process.env.DB_POOL_MAX || 10),
-        min: 0,
-        acquire: 30000,
-        idle: 10000,
-      },
-    });
-  } else {
-    sequelize = new Sequelize(
-      cfg.database,
-      cfg.username,
-      cfg.password,
-      {
-        host: cfg.host,
-        port: cfg.port || 5432,
-        dialect: cfg.dialect,
-        dialectOptions: cfg.dialectOptions,
-        logging: cfg.logging,
-        pool: {
-          max: Number(process.env.DB_POOL_MAX || 10),
-          min: 0,
-          acquire: 30000,
-          idle: 10000,
-        },
+  console.log('[DB] Using direct database configuration');
+  
+  // Direct database configuration
+  const dbConfig = {
+    database: 'maziv_project',
+    username: 'maziv_user',
+    password: 'Y0x1lLB1r8AI8oLmOQ009R3ej0eVY4I7',
+    host: 'dpg-d2neh77diees73cicfl0-a.oregon-postgres.render.com',
+    port: 5432,
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
       }
-    );
-  }
+    },
+    pool: {
+      max: 10,
+      min: 0,
+      acquire: 30000,
+      idle: 10000
+    },
+    logging: process.env.NODE_ENV === 'development' ? console.log : false
+  };
+
+  console.log('Database config:', {
+    database: dbConfig.database,
+    host: dbConfig.host,
+    port: dbConfig.port,
+    username: dbConfig.username ? '***' : undefined,
+    dialect: dbConfig.dialect,
+    ssl: dbConfig.dialectOptions?.ssl || false,
+    pool: dbConfig.pool
+  });
+
+  sequelize = new Sequelize(
+    dbConfig.database,
+    dbConfig.username,
+    dbConfig.password,
+    {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      dialect: dbConfig.dialect,
+      dialectOptions: dbConfig.dialectOptions,
+      logging: dbConfig.logging,
+      pool: dbConfig.pool
+    }
+  );
+  
+  return sequelize;
 }
 
 if (!sequelize) {

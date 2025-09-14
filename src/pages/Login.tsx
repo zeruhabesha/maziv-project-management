@@ -6,7 +6,6 @@ import { Building2, Eye, EyeOff, PlayCircle } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { loginStart, clearError } from '../store/slices/authSlice';
 import toast from 'react-hot-toast';
-import { testApiConnection, testLoginEndpoint } from '../utils/apiTest';
 
 interface LoginForm {
   email: string;
@@ -21,8 +20,13 @@ const Login: React.FC = () => {
   const {
     register,
     handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>();
+    formState: { errors, isSubmitting },
+  } = useForm<LoginForm>({
+    defaultValues: {
+      email: 'testuser@example.com',
+      password: 'StrongPass123!'
+    }
+  });
 
   useEffect(() => {
     if (error) {
@@ -31,125 +35,35 @@ const Login: React.FC = () => {
     }
   }, [error, dispatch]);
 
-  const [apiStatus, setApiStatus] = useState<{
-    health: any;
-    login: any;
-    loading: boolean;
-  }>({ health: null, login: null, loading: true });
-
-  // Test API connection on component mount
+  // Log environment info for debugging
   useEffect(() => {
-    const runApiTests = async () => {
-      console.log('Running API connection tests...');
-      setApiStatus(prev => ({ ...prev, loading: true }));
-      
-      try {
-        const [healthTest, loginTest] = await Promise.all([
-          testApiConnection(),
-          testLoginEndpoint()
-        ]);
-        
-        console.log('API Tests Results:', { health: healthTest, login: loginTest });
-        
-        // Show toast if there are any issues
-        if (!healthTest.success) {
-          toast.error(`API Connection Error: ${healthTest.error || 'Unknown error'}`);
-        } else if (!loginTest.success) {
-          toast.error(`Login Test Failed: ${loginTest.error || 'Unknown error'}`);
-        } else {
-          toast.success('API connection test successful!');
-        }
-        
-        setApiStatus({
-          health: healthTest,
-          login: loginTest,
-          loading: false
-        });
-      } catch (error) {
-        console.error('Error running API tests:', error);
-        toast.error('Failed to run API tests');
-        setApiStatus(prev => ({ ...prev, loading: false }));
-      }
-    };
-    
-    runApiTests();
-  }, []);
-
-  const onSubmit = async (data: LoginForm) => {
-    console.log('Login form submitted:', { 
-      email: data.email,
-      environment: import.meta.env.MODE,
+    console.log('Login environment info:', {
+      mode: import.meta.env.MODE,
       apiUrl: import.meta.env.VITE_API_URL,
       isProd: import.meta.env.PROD,
-      location: window.location.href,
-      timestamp: new Date().toISOString()
+      location: window.location.href
     });
+  }, []);
+
+  const onSubmit = (data: LoginForm) => {
+    console.log('Login form submitted:', data);
     
-    try {
-      // Clear any previous errors
-      dispatch(clearError());
-      
-      // Dispatch the login action
-      await dispatch(loginStart(data));
-      
-      // If we get here, the login was successful (the saga will handle the redirect)
-      // The success toast is already shown in the saga
-    } catch (error) {
-      // Error is already handled by the saga and shown via toast
-      console.error('Login error in component:', error);
-    }
+    // Clear any previous errors
+    dispatch(clearError());
+    
+    // Dispatch the login action
+    dispatch(loginStart({
+      email: data.email,
+      password: data.password
+    }));
   };
   
 
+  // Redirect to dashboard if already authenticated
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
 
-  const renderApiStatus = () => {
-    if (apiStatus.loading) {
-      return (
-        <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md text-sm">
-          Testing API connection...
-        </div>
-      );
-    }
-
-    return (
-      <div className="mb-4 space-y-2">
-        <div className={`p-3 rounded-md text-sm ${
-          apiStatus.health?.success 
-            ? 'bg-green-50 text-green-700' 
-            : 'bg-red-50 text-red-700'
-        }`}>
-          <div className="font-medium">API Status</div>
-          <div className="text-xs mt-1">
-            {apiStatus.health?.success 
-              ? '✅ Connected to the API server'
-              : `❌ Connection failed: ${apiStatus.health?.error || 'Unknown error'}`}
-          </div>
-          {apiStatus.health?.url && (
-            <div className="text-xs opacity-75 mt-1">URL: {apiStatus.health.url}</div>
-          )}
-        </div>
-
-        <div className={`p-3 rounded-md text-sm ${
-          apiStatus.login?.success 
-            ? 'bg-green-50 text-green-700' 
-            : 'bg-amber-50 text-amber-700'
-        }`}>
-          <div className="font-medium">Login Test</div>
-          <div className="text-xs mt-1">
-            {apiStatus.login?.success 
-              ? '✅ Login endpoint is working'
-              : `⚠️ Login test failed: ${apiStatus.login?.error || 'Unknown error'}`}
-          </div>
-          {apiStatus.login?.url && (
-            <div className="text-xs opacity-75 mt-1">URL: {apiStatus.login.url}</div>
-          )}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
@@ -161,8 +75,6 @@ const Login: React.FC = () => {
             <p className="text-gray-600">Sign in to continue</p>
           </div>
 
-          {/* API Status */}
-          {renderApiStatus()}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
@@ -173,34 +85,84 @@ const Login: React.FC = () => {
                   pattern: { 
                     value: /^\S+@\S+$/i, 
                     message: 'Invalid email address' 
-                  }
-                })} 
+                  } 
+                })}
                 type="email"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" 
-                placeholder="Enter your email" 
+                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
+                placeholder="Enter your email"
+                disabled={loading}
               />
-              {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
-              <div className="relative">
-                <input {...register('password', { required: 'Password is required' })} type={showPassword ? 'text' : 'password'}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter your password" />
-                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-sm text-blue-600 hover:text-blue-800"
+                  disabled={loading}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
                 </button>
               </div>
-              {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
+              <div className="relative">
+                <input
+                  {...register('password', { 
+                    required: 'Password is required',
+                    minLength: { value: 8, message: 'Password must be at least 8 characters' }
+                  })}
+                  type={showPassword ? 'text' : 'password'}
+                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.password ? 'border-red-500' : 'border-gray-300'
+                  }`}
+                  placeholder="Enter your password"
+                  disabled={loading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+                  disabled={loading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              )}
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={loading || isSubmitting}
+                className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                  (loading || isSubmitting) ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
+              >
+                {loading || isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </button>
+            </div>
           </form>
 
           <div className="mt-8 text-center"><p className="text-xs text-gray-500">Secure project management system</p></div>
