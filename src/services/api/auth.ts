@@ -2,21 +2,56 @@ import api from '../api';
 
 // Login user 
 export const login = async (credentials: { email: string; password: string }) => {
+  const endpoint = '/auth/login';
+  const fullUrl = `${api.defaults.baseURL}${endpoint}`;
+  
+  console.log('Auth API: login request:', {
+    url: fullUrl,
+    email: credentials.email,
+    baseURL: api.defaults.baseURL,
+    withCredentials: api.defaults.withCredentials
+  });
+  
   try {
-    console.log('Auth API: login called with email:', credentials.email);
-    console.log('Auth API: baseURL:', api.defaults.baseURL);
+    const response = await api.post(endpoint, credentials, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      withCredentials: true
+    });
     
-    const response = await api.post('/auth/login', credentials);
-    console.log('Auth API: login successful');
+    console.log('Auth API: login successful:', {
+      status: response.status,
+      data: response.data
+    });
+    
     return response;
   } catch (error: any) {
-    console.error('Auth API: login failed:', {
+    const errorInfo = {
       message: error?.message || 'Unknown error',
       status: error?.response?.status,
+      statusText: error?.response?.statusText,
       data: error?.response?.data,
-      url: error?.config?.url
-    });
-    throw error;
+      url: error?.config?.url,
+      method: error?.config?.method,
+      requestData: error?.config?.data,
+      headers: error?.config?.headers
+    };
+    
+    console.error('Auth API: login failed:', errorInfo);
+    
+    // Create a more informative error
+    const errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Login failed';
+    
+    const loginError = new Error(errorMessage);
+    (loginError as any).status = error.response?.status;
+    (loginError as any).data = error.response?.data;
+    
+    throw loginError;
   }
 };
 

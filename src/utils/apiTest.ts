@@ -71,8 +71,11 @@ export const testApiConnection = async () => {
 
 // Test login endpoint specifically
 export const testLoginEndpoint = async () => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com/api';
-  const loginUrl = baseUrl.endsWith('/') ? `${baseUrl}auth/login` : `${baseUrl}/auth/login`;
+  // Use the same base URL logic as the API client
+  let baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com';
+  baseUrl = baseUrl.replace(/\/api\/?$/, ''); // Remove any trailing /api
+  
+  const loginUrl = `${baseUrl}/api/auth/login`;
   
   console.log('Testing login endpoint:', loginUrl);
   
@@ -81,21 +84,27 @@ export const testLoginEndpoint = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
+      credentials: 'include',
       body: JSON.stringify({
-        email: 'testuser@example.com',
-        password: 'StrongPass123!',
+        email: 'testuser2@example.com', // Updated to match the working test user
+        password: 'TestPass123!',       // Updated to match the working test user
       }),
     });
+    
+    const responseData = await response.json().catch(() => ({
+      error: 'Invalid JSON response',
+      status: 'unknown'
+    }));
     
     console.log('Login test response:', {
       status: response.status,
       statusText: response.statusText,
       url: response.url,
-      ok: response.ok
+      ok: response.ok,
+      data: responseData
     });
-    
-    const responseData = await response.json().catch(() => ({}));
     
     if (response.ok) {
       console.log('Login test successful:', responseData);
@@ -103,19 +112,23 @@ export const testLoginEndpoint = async () => {
         success: true, 
         message: 'Login test successful',
         data: responseData,
-        status: response.status
+        status: response.status,
+        url: response.url
       };
     } else {
+      const errorMessage = responseData?.error || response.statusText || 'Unknown error';
       console.error('Login test failed:', {
         status: response.status,
         statusText: response.statusText,
-        error: responseData
+        error: errorMessage,
+        data: responseData
       });
       return { 
         success: false, 
-        error: `Login failed: ${response.status} ${response.statusText}`,
+        error: `Login failed: ${response.status} ${errorMessage}`,
         status: response.status,
-        details: responseData
+        details: responseData,
+        url: response.url
       };
     }
   } catch (error: any) {

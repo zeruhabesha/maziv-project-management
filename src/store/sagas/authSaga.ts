@@ -26,26 +26,46 @@ function* loginSaga(action: PayloadAction<{ email: string; password: string }>):
       PROD: import.meta.env.PROD,
       VITE_API_URL: import.meta.env.VITE_API_URL,
       location: window.location.href,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      apiBaseURL: (window as any).api?.defaults?.baseURL
     };
     console.log('Login Environment:', envInfo);
     
-    // Make the API call
-    const response = yield call(authApi.login, action.payload);
+    // Make the API call with detailed error handling
+    const response: any = yield call(authApi.login, action.payload);
+    
+    console.log('Login API Response:', {
+      status: response?.status,
+      statusText: response?.statusText,
+      data: response?.data,
+      headers: response?.headers
+    });
     
     if (!response || !response.data) {
+      console.error('Invalid response from server:', response);
       throw new Error('Invalid response from server');
     }
     
-    console.log('Login successful, response data:', response.data);
-    
-    const { user, token } = response.data.data || response.data;
+    // Handle different response structures
+    let user, token;
+    if (response.data.data) {
+      // Response has { data: { user, token } } structure
+      ({ user, token } = response.data.data);
+    } else if (response.data.user && response.data.token) {
+      // Response has { user, token } structure
+      ({ user, token } = response.data);
+    } else {
+      console.error('Unexpected response structure:', response.data);
+      throw new Error('Unexpected response structure from server');
+    }
     
     if (!token) {
+      console.error('No authentication token received in response:', response.data);
       throw new Error('No authentication token received');
     }
     
     // Store token and update state
+    console.log('Storing token and updating auth state');
     localStorage.setItem('token', token);
     yield put(loginSuccess({ user, token }));
     
