@@ -47,24 +47,54 @@ const Login: React.FC = () => {
     runApiTests();
   }, []);
 
-  const onSubmit = (data: LoginForm) => {
+  const onSubmit = async (data: LoginForm) => {
     console.log('Login form submitted:', { 
       email: data.email,
       environment: import.meta.env.MODE,
       apiUrl: import.meta.env.VITE_API_URL,
-      isProd: import.meta.env.PROD
+      isProd: import.meta.env.PROD,
+      location: window.location.href,
+      timestamp: new Date().toISOString()
     });
-    dispatch(loginStart(data));
+    
+    try {
+      // Clear any previous errors
+      dispatch(clearError());
+      
+      // Show loading state
+      const result = await dispatch(loginStart(data));
+      
+      // If login was successful, the redirect will happen automatically
+      if (loginStart.fulfilled.match(result)) {
+        toast.success('Login successful!');
+      }
+    } catch (error) {
+      // Error is already handled by the saga and shown via toast
+      console.error('Login error in component:', error);
+    }
   };
   
   // New handler for one-click demo login
-  const handleDemoLogin = (role: 'admin' | 'manager' | 'user') => {
+  const handleDemoLogin = async (role: 'admin' | 'manager' | 'user') => {
     let credentials = { email: '', password: 'password123' }; // Use a consistent secure password
     if(role === 'admin') credentials.email = 'admin@projectflow.com';
     if(role === 'manager') credentials.email = 'manager@projectflow.com';
     if(role === 'user') credentials.email = 'user@projectflow.com';
     
-    dispatch(loginStart(credentials));
+    try {
+      // Clear any previous errors
+      dispatch(clearError());
+      
+      // Show loading state
+      const result = await dispatch(loginStart(credentials));
+      
+      if (loginStart.fulfilled.match(result)) {
+        toast.success(`Logged in as ${role} successfully!`);
+      }
+    } catch (error) {
+      console.error('Demo login error:', error);
+      toast.error(`Failed to login as ${role}. Please try again.`);
+    }
   };
 
 
