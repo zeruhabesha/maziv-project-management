@@ -19,12 +19,16 @@ import { fetchNotificationsStart } from '../slices/notificationsSlice';
 function* loginSaga(action: PayloadAction<{ email: string; password: string }>): Generator {
   console.log('loginSaga called with', action);
   try {
+    console.log('API Base URL:', import.meta.env.VITE_API_URL || 'Using default');
     const response = yield call(authApi.login, action.payload);
+    console.log('Login response:', response);
     const { user, token } = response.data.data;
     localStorage.setItem('token', token);
     yield put(loginSuccess({ user, token }));
     yield put(fetchNotificationsStart(user.id));
   } catch (error: any) {
+    console.error('Login error:', error);
+    console.error('Error response:', error.response);
     yield put(loginFailure(error.response?.data?.message || 'Login failed'));
   }
 }

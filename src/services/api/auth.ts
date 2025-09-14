@@ -16,6 +16,7 @@ import api from '../api'; // This default import now works correctly.
 // Login user 
 export const login = (credentials: any) => {
   console.log('API: login called with', credentials);
+  console.log('API base URL:', api.defaults.baseURL);
   return api.post('/auth/login', credentials);
 };
 

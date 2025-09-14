@@ -1,13 +1,13 @@
 import axios from 'axios';
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||                 // <-- use env when provided
-  (import.meta.env.MODE === 'development'
-    ? '/api'                                      // vite proxy in dev
-    : 'https://maziv-project-management.onrender.com/api'); // prod fallback
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.MODE === 'development' 
+    ? '/api' 
+    : 'https://maziv-project-management.onrender.com/api');
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 30000, // 30 second timeout for slow Render responses
   // Removed global Content-Type header to allow FormData uploads
 });
 

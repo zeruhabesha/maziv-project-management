@@ -7,10 +7,19 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
- server: {
+  server: {
     proxy: {
-      '/api': 'https://maziv-project-management.onrender.com', // use your live backend
+      '/api': {
+        target: 'https://maziv-project-management.onrender.com',
+        changeOrigin: true,
+        secure: true,
+        timeout: 30000
+      }
     }
+  },
+  define: {
+    // Ensure environment variables are available at build time
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL)
   }
 });
 
