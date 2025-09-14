@@ -2,6 +2,7 @@ import api from '../api';
 
 // Login user 
 export const login = async (credentials: { email: string; password: string }) => {
+  // Ensure the endpoint starts with a forward slash but doesn't have /api prefix (it's already in baseURL)
   const endpoint = '/auth/login';
   const fullUrl = `${api.defaults.baseURL}${endpoint}`;
   
@@ -9,7 +10,12 @@ export const login = async (credentials: { email: string; password: string }) =>
     url: fullUrl,
     email: credentials.email,
     baseURL: api.defaults.baseURL,
-    withCredentials: api.defaults.withCredentials
+    withCredentials: api.defaults.withCredentials,
+    env: {
+      NODE_ENV: import.meta.env.MODE,
+      PROD: import.meta.env.PROD,
+      VITE_API_URL: import.meta.env.VITE_API_URL
+    }
   });
   
   try {
@@ -17,14 +23,29 @@ export const login = async (credentials: { email: string; password: string }) =>
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'  // Helps with CORS
       },
-      withCredentials: true
+      withCredentials: true,
+      validateStatus: (status) => status < 500 // Don't throw for 4xx errors
     });
     
-    console.log('Auth API: login successful:', {
+    console.log('Auth API: login response:', {
       status: response.status,
-      data: response.data
+      statusText: response.statusText,
+      headers: response.headers,
+      data: response.data,
+      config: {
+        url: response.config.url,
+        baseURL: response.config.baseURL,
+        method: response.config.method
+      }
     });
+    
+    if (response.status >= 400) {
+      const error = new Error(response.data?.message || 'Login failed');
+      (error as any).response = response;
+      throw error;
+    }
     
     return response;
   } catch (error: any) {
