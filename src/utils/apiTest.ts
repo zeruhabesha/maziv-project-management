@@ -1,7 +1,7 @@
 // Utility to test API configuration
 export const testApiConnection = async () => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com/api';
-  const healthEndpoint = '/health';
+  const baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com';
+  const healthEndpoint = '/api/health';
   const healthUrl = baseUrl.endsWith('/') 
     ? `${baseUrl}${healthEndpoint.replace(/^\//, '')}`
     : `${baseUrl}${healthEndpoint}`;
@@ -13,37 +13,47 @@ export const testApiConnection = async () => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       },
+      credentials: 'include' // Important for cookies/auth
     });
+    
+    const responseData = await response.json().catch(() => ({
+      error: 'Invalid JSON response',
+      status: 'unknown'
+    }));
     
     console.log('Health check response:', {
       status: response.status,
       statusText: response.statusText,
       url: response.url,
-      ok: response.ok
+      ok: response.ok,
+      data: responseData
     });
     
-    const responseData = await response.json().catch(() => ({}));
-    
     if (response.ok) {
-      console.log('Health check successful:', responseData);
       return { 
         success: true, 
         message: 'API is healthy',
         data: responseData,
-        status: response.status
+        status: response.status,
+        url: response.url
       };
     } else {
+      const errorMessage = responseData?.error || response.statusText || 'Unknown error';
       console.error('Health check failed:', {
         status: response.status,
         statusText: response.statusText,
-        error: responseData
+        error: errorMessage,
+        data: responseData
       });
       return { 
         success: false, 
-        error: `Health check failed: ${response.status} ${response.statusText}`,
+        error: `Health check failed: ${response.status} ${errorMessage}`,
         status: response.status,
-        details: responseData
+        details: responseData,
+        url: response.url
       };
     }
   } catch (error: any) {

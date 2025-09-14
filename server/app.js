@@ -80,7 +80,29 @@ import errorHandler from './middleware/errorHandler.js';
     // static file serving
     app.use('/uploads', express.static(path.join(process.cwd(), 'server', 'uploads')));
 
-    // 3) Routes
+    // Health check endpoint
+    app.get('/api/health', async (req, res) => {
+      try {
+        // Test database connection
+        await models.sequelize.authenticate();
+        
+        res.status(200).json({
+          status: 'ok',
+          timestamp: new Date().toISOString(),
+          database: 'connected',
+          environment: process.env.NODE_ENV || 'development',
+        });
+      } catch (error) {
+        console.error('Health check failed:', error);
+        res.status(500).json({
+          status: 'error',
+          error: error.message,
+          database: 'disconnected',
+        });
+      }
+    });
+
+    // Routes
     app.get('/health', (_req, res) => res.json({ ok: true }));
 
     app.use('/api/auth', authRouter);
