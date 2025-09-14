@@ -1,53 +1,52 @@
 import api from '../api';
 
-// Login user 
+/**
+ * Login a user with email and password
+ * @param credentials User credentials (email and password)
+ * @returns User data and auth token
+ * @throws Error with response data if login fails
+ */
 export const login = async (credentials: { email: string; password: string }) => {
-  // Ensure the endpoint starts with a forward slash but doesn't have /api prefix (it's already in baseURL)
   const endpoint = '/auth/login';
-  const fullUrl = `${api.defaults.baseURL}${endpoint}`;
   
-  console.log('Auth API: login request:', {
-    url: fullUrl,
-    email: credentials.email,
-    baseURL: api.defaults.baseURL,
-    withCredentials: api.defaults.withCredentials,
-    env: {
-      NODE_ENV: import.meta.env.MODE,
-      PROD: import.meta.env.PROD,
-      VITE_API_URL: import.meta.env.VITE_API_URL
-    }
-  });
+  // Log request details in development
+  if (import.meta.env.DEV) {
+    console.log('Auth API - Login Request:', {
+      endpoint,
+      baseURL: api.defaults.baseURL,
+      environment: import.meta.env.MODE,
+      withCredentials: api.defaults.withCredentials
+    });
+  }
   
   try {
     const response = await api.post(endpoint, credentials, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest'  // Helps with CORS
-      },
-      withCredentials: true,
       validateStatus: (status) => status < 500 // Don't throw for 4xx errors
     });
     
-    console.log('Auth API: login response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers,
-      data: response.data,
-      config: {
+    // Log response in development
+    if (import.meta.env.DEV) {
+      console.log('Auth API - Login Response:', {
+        status: response.status,
         url: response.config.url,
-        baseURL: response.config.baseURL,
-        method: response.config.method
-      }
-    });
+        data: response.data
+      });
+    }
     
+    // Handle error responses (4xx)
     if (response.status >= 400) {
-      const error = new Error(response.data?.message || 'Login failed');
+      const errorMessage = response.data?.message || 'Login failed';
+      const error = new Error(errorMessage);
       (error as any).response = response;
       throw error;
     }
     
-    return response;
+    // Store the token if available
+    if (response.data?.token) {
+      localStorage.setItem('token', response.data.token);
+    }
+    
+    return response.data;
   } catch (error: any) {
     const errorInfo = {
       message: error?.message || 'Unknown error',

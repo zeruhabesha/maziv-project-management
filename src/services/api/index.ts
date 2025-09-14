@@ -1,53 +1,89 @@
 import axios from 'axios';
 
-// Get the base URL for API requests
-const getApiBaseUrl = () => {
-  // In production, always use the Render backend URL
-  if (import.meta.env.PROD) {
-    return 'https://maziv-project-management.onrender.com/api';
-  }
-  
-  // In development, use the Vite proxy if available, otherwise use the full URL
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:10000';
-  
-  // Ensure we have the full URL with protocol
-  let url = baseUrl.startsWith('http') ? baseUrl : `http://${baseUrl}`;
-  
-  // Ensure we have the /api prefix
-  if (!url.endsWith('/api')) {
-    url = url.endsWith('/') ? `${url}api` : `${url}/api`;
-  }
-  
-  // Remove any double slashes
-  url = url.replace(/([^:]\/)\/+/g, '$1');
-  
-  // Log the final URL for debugging
-  console.log('Using API base URL:', url);
-  return url;
-};
+// Base URL configuration
+const API_BASE_URL = import.meta.env.MODE === 'development'
+  ? '/api' // Use Vite proxy in development
+  : import.meta.env.VITE_API_BASE_URL || 'https://maziv-project-management.onrender.com/api';
+
+// Log environment for debugging
+console.log('API Configuration:', {
+  mode: import.meta.env.MODE,
+  isProduction: import.meta.env.PROD,
+  apiBaseUrl: API_BASE_URL,
+  viteApiUrl: import.meta.env.VITE_API_URL,
+  viteApiBaseUrl: import.meta.env.VITE_API_BASE_URL
+});
 
 // Create axios instance with default config
-export const api = axios.create({
-  baseURL: getApiBaseUrl(),
+const api = axios.create({
+  baseURL: API_BASE_URL,
   timeout: 30000, // 30 second timeout
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
-  withCredentials: true, // Important for cookies/auth
-  xsrfCookieName: 'XSRF-TOKEN',
-  xsrfHeaderName: 'X-XSRF-TOKEN',
+  withCredentials: true
 });
 
-// Add request interceptor to ensure consistent URL formatting
-api.interceptors.request.use(config => {
-  // Remove any double slashes that might occur in the URL
-  if (config.url) {
-    config.url = config.url.replace(/([^:]\/)\/+/g, '$1');
+// Request interceptor for auth token
+api.interceptors.request.use(
+  (config) => {
+    // Get token from localStorage (or your auth store)
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Response interceptor for error handling
+api.interceptors.response.use(
+  (response) => {
+    if (import.meta.env.DEV) {
+      console.log('API Response:', {
+        url: response.config.url,
+        status: response.status,
+        data: response.data
+      });
+    }
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      // Server responded with a status code outside 2xx
+      console.error('API Error:', {
+        url: error.config?.url,
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+
+      // Handle specific status codes
+      if (error.response.status === 401) {
+        // Handle unauthorized (e.g., token expired)
+        console.warn('Authentication required');
+      } else if (error.response.status === 403) {
+        // Handle forbidden
+        console.warn('Access denied');
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      console.error('No response from server:', error.request);
+    } else {
+      // Something happened in setting up the request
+      console.error('Request setup error:', error.message);
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+export { api };
 
 // Add a response interceptor to handle 401 responses
 api.interceptors.response.use(

@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import type { IncomingMessage } from 'http';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -9,25 +10,24 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '^/api/.*': {
-        target: 'https://maziv-project-management.onrender.com',
+      '/api': {
+        target: 'http://localhost:10000', // Local backend server
         changeOrigin: true,
-        secure: true,
+        secure: false, // For local development with self-signed certs
         ws: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, _res) => {
+        rewrite: (path) => path.replace(/^\/api/, '/api'), // Keep /api prefix for backend routes
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
             console.error('Proxy Error:', err);
           });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (_proxyReq, req: IncomingMessage) => {
             console.log('API Request:', {
               method: req.method,
               url: req.url,
-              headers: req.headers,
-              body: req.body
+              headers: req.headers
             });
           });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
+          proxy.on('proxyRes', (proxyRes: IncomingMessage, req: IncomingMessage) => {
             console.log('API Response:', {
               statusCode: proxyRes.statusCode,
               statusMessage: proxyRes.statusMessage,
