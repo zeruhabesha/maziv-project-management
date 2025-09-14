@@ -27,7 +27,17 @@ import errorHandler from './middleware/errorHandler.js';
 
     // 2) Setup app
     const app = express();
-    app.use(cors());
+  // In server/app.js, update the CORS configuration
+app.use(cors({
+  origin: [
+    'http://localhost:5173', // Local development
+    'http://localhost:3000', // Alternative local
+    'https://your-vercel-app.vercel.app', // Replace with your actual Vercel URL
+    'https://maziv-project-management.vercel.app' // If this is your domain
+  ],
+  credentials: true
+}));
+
     app.use(helmet());
     app.use(express.json({ limit: '10mb' }));
     app.use(express.urlencoded({ extended: true }));

@@ -6,6 +6,7 @@ import { Building2, Eye, EyeOff, PlayCircle } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../hooks/redux';
 import { loginStart, clearError } from '../store/slices/authSlice';
 import toast from 'react-hot-toast';
+import { testApiConnection, testLoginEndpoint } from '../utils/apiTest';
 
 interface LoginForm {
   email: string;
@@ -30,7 +31,29 @@ const Login: React.FC = () => {
     }
   }, [error, dispatch]);
 
+  // Test API connection on component mount
+  useEffect(() => {
+    const runApiTests = async () => {
+      console.log('Running API connection tests...');
+      const healthTest = await testApiConnection();
+      const loginTest = await testLoginEndpoint();
+      
+      console.log('API Tests Results:', {
+        health: healthTest,
+        login: loginTest
+      });
+    };
+    
+    runApiTests();
+  }, []);
+
   const onSubmit = (data: LoginForm) => {
+    console.log('Login form submitted:', { 
+      email: data.email,
+      environment: import.meta.env.MODE,
+      apiUrl: import.meta.env.VITE_API_URL,
+      isProd: import.meta.env.PROD
+    });
     dispatch(loginStart(data));
   };
   
@@ -77,7 +100,7 @@ const Login: React.FC = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
               <input {...register('email', { required: 'Email is required', pattern: { value: /^\S+@\S+$/i, message: 'Invalid email address' }})} type="email"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500" placeholder="Enter your email" />
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500\" placeholder=\"Enter your email" />
               {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
             </div>
 
