@@ -1,13 +1,15 @@
 // Utility to test API configuration
 export const testApiConnection = async () => {
-  const baseUrl = import.meta.env.PROD 
-    ? (import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com/api')
-    : '/api';
-    
-  console.log('Testing API connection to:', baseUrl);
+  const baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com/api';
+  const healthEndpoint = '/health';
+  const healthUrl = baseUrl.endsWith('/') 
+    ? `${baseUrl}${healthEndpoint.replace(/^\//, '')}`
+    : `${baseUrl}${healthEndpoint}`;
+  
+  console.log('Testing API health check at:', healthUrl);
   
   try {
-    const response = await fetch(`${baseUrl}/health`, {
+    const response = await fetch(healthUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -17,55 +19,98 @@ export const testApiConnection = async () => {
     console.log('Health check response:', {
       status: response.status,
       statusText: response.statusText,
-      url: response.url
+      url: response.url,
+      ok: response.ok
     });
     
+    const responseData = await response.json().catch(() => ({}));
+    
     if (response.ok) {
-      const data = await response.json();
-      console.log('Health check data:', data);
-      return { success: true, data };
+      console.log('Health check successful:', responseData);
+      return { 
+        success: true, 
+        message: 'API is healthy',
+        data: responseData,
+        status: response.status
+      };
     } else {
-      console.error('Health check failed:', response.status, response.statusText);
-      return { success: false, error: `${response.status} ${response.statusText}` };
+      console.error('Health check failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: responseData
+      });
+      return { 
+        success: false, 
+        error: `Health check failed: ${response.status} ${response.statusText}`,
+        status: response.status,
+        details: responseData
+      };
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Health check error:', error);
-    return { success: false, error: error.message };
+    return { 
+      success: false, 
+      error: error.message || 'Unknown error during health check',
+      details: error
+    };
   }
 };
 
 // Test login endpoint specifically
 export const testLoginEndpoint = async () => {
-  const baseUrl = import.meta.env.PROD 
-    ? (import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com/api')
-    : '/api';
-    
-  const loginUrl = `${baseUrl}/auth/login`;
+  const baseUrl = import.meta.env.VITE_API_URL || 'https://maziv-project-management.onrender.com/api';
+  const loginUrl = baseUrl.endsWith('/') ? `${baseUrl}auth/login` : `${baseUrl}/auth/login`;
+  
   console.log('Testing login endpoint:', loginUrl);
   
   try {
-    // Just test if the endpoint exists (should return 400 for missing credentials)
     const response = await fetch(loginUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({}), // Empty body should trigger validation error
+      body: JSON.stringify({
+        email: 'testuser@example.com',
+        password: 'StrongPass123!',
+      }),
     });
     
-    console.log('Login endpoint test:', {
+    console.log('Login test response:', {
       status: response.status,
       statusText: response.statusText,
-      url: response.url
+      url: response.url,
+      ok: response.ok
     });
     
+    const responseData = await response.json().catch(() => ({}));
+    
+    if (response.ok) {
+      console.log('Login test successful:', responseData);
+      return { 
+        success: true, 
+        message: 'Login test successful',
+        data: responseData,
+        status: response.status
+      };
+    } else {
+      console.error('Login test failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: responseData
+      });
+      return { 
+        success: false, 
+        error: `Login failed: ${response.status} ${response.statusText}`,
+        status: response.status,
+        details: responseData
+      };
+    }
+  } catch (error: any) {
+    console.error('Login test error:', error);
     return { 
-      success: response.status !== 404, // 404 means endpoint doesn't exist
-      status: response.status,
-      url: response.url
+      success: false, 
+      error: error.message || 'Unknown error during login test',
+      details: error
     };
-  } catch (error) {
-    console.error('Login endpoint test error:', error);
-    return { success: false, error: error.message };
   }
 };

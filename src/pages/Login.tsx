@@ -31,17 +31,45 @@ const Login: React.FC = () => {
     }
   }, [error, dispatch]);
 
+  const [apiStatus, setApiStatus] = useState<{
+    health: any;
+    login: any;
+    loading: boolean;
+  }>({ health: null, login: null, loading: true });
+
   // Test API connection on component mount
   useEffect(() => {
     const runApiTests = async () => {
       console.log('Running API connection tests...');
-      const healthTest = await testApiConnection();
-      const loginTest = await testLoginEndpoint();
+      setApiStatus(prev => ({ ...prev, loading: true }));
       
-      console.log('API Tests Results:', {
-        health: healthTest,
-        login: loginTest
-      });
+      try {
+        const [healthTest, loginTest] = await Promise.all([
+          testApiConnection(),
+          testLoginEndpoint()
+        ]);
+        
+        console.log('API Tests Results:', { health: healthTest, login: loginTest });
+        
+        // Show toast if there are any issues
+        if (!healthTest.success) {
+          toast.error(`API Connection Error: ${healthTest.error || 'Unknown error'}`);
+        } else if (!loginTest.success) {
+          toast.error(`Login Test Failed: ${loginTest.error || 'Unknown error'}`);
+        } else {
+          toast.success('API connection test successful!');
+        }
+        
+        setApiStatus({
+          health: healthTest,
+          login: loginTest,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Error running API tests:', error);
+        toast.error('Failed to run API tests');
+        setApiStatus(prev => ({ ...prev, loading: false }));
+      }
     };
     
     runApiTests();
@@ -74,8 +102,54 @@ const Login: React.FC = () => {
   
 
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/dashboard" />;
   }
+
+  const renderApiStatus = () => {
+    if (apiStatus.loading) {
+      return (
+        <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded-md text-sm">
+          Testing API connection...
+        </div>
+      );
+    }
+
+    return (
+      <div className="mb-4 space-y-2">
+        <div className={`p-3 rounded-md text-sm ${
+          apiStatus.health?.success 
+            ? 'bg-green-50 text-green-700' 
+            : 'bg-red-50 text-red-700'
+        }`}>
+          <div className="font-medium">API Status</div>
+          <div className="text-xs mt-1">
+            {apiStatus.health?.success 
+              ? '✅ Connected to the API server'
+              : `❌ Connection failed: ${apiStatus.health?.error || 'Unknown error'}`}
+          </div>
+          {apiStatus.health?.url && (
+            <div className="text-xs opacity-75 mt-1">URL: {apiStatus.health.url}</div>
+          )}
+        </div>
+
+        <div className={`p-3 rounded-md text-sm ${
+          apiStatus.login?.success 
+            ? 'bg-green-50 text-green-700' 
+            : 'bg-amber-50 text-amber-700'
+        }`}>
+          <div className="font-medium">Login Test</div>
+          <div className="text-xs mt-1">
+            {apiStatus.login?.success 
+              ? '✅ Login endpoint is working'
+              : `⚠️ Login test failed: ${apiStatus.login?.error || 'Unknown error'}`}
+          </div>
+          {apiStatus.login?.url && (
+            <div className="text-xs opacity-75 mt-1">URL: {apiStatus.login.url}</div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
@@ -86,6 +160,9 @@ const Login: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">ProjectFlow</h1>
             <p className="text-gray-600">Sign in to continue</p>
           </div>
+
+          {/* API Status */}
+          {renderApiStatus()}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
