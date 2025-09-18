@@ -63,6 +63,7 @@ function* loginSaga(action: ReturnType<typeof loginStart>): Generator {
     }
     // Handle API response errors
     else if (err?.response) {
+    }
     
     if (err?.response) {
       const { status, data } = err.response;
