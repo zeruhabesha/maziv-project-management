@@ -13,6 +13,8 @@ function* loginSaga(action: ReturnType<typeof loginStart>): Generator {
   try {
     const { email, password } = action.payload;
     
+    console.log('Login saga: Starting login process for:', email);
+    
     // Make the API call
     response = yield call(api.post, '/auth/login', { email, password });
     
@@ -49,11 +51,20 @@ function* loginSaga(action: ReturnType<typeof loginStart>): Generator {
     
   } catch (err: any) {
     // Handle different types of errors
-    let errorMessage = 'Login failed. Please check your credentials and try again.';
+    let errorMessage = 'Login failed. Please try again.';
+    
+    // Handle timeout errors
+    if (err?.isTimeout || err?.message?.includes('timeout')) {
+      errorMessage = 'Login request timed out. Please check your connection and try again.';
+    }
+    // Handle network errors
+    else if (err?.isNetworkError || err?.code === 'NETWORK_ERROR') {
+      errorMessage = 'Unable to connect to the server. Please check your internet connection.';
+    }
+    // Handle API response errors
+    else if (err?.response) {
     
     if (err?.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
       const { status, data } = err.response;
       console.error('Login API Error:', { status, data });
       
@@ -66,12 +77,9 @@ function* loginSaga(action: ReturnType<typeof loginStart>): Generator {
       } else if (data?.message) {
         errorMessage = data.message;
       }
-    } else if (err?.request) {
-      // The request was made but no response was received
-      console.error('No response from server:', err.request);
-      errorMessage = 'Unable to connect to the server. Please check your internet connection.';
-    } else {
-      // Something happened in setting up the request that triggered an Error
+    }
+    // Handle other errors
+    else {
       console.error('Login error:', err.message);
       errorMessage = err.message || 'An unexpected error occurred';
     }
@@ -81,11 +89,6 @@ function* loginSaga(action: ReturnType<typeof loginStart>): Generator {
     
     // Update the UI with the error message
     yield put(loginFailure(errorMessage));
-    
-    // Show error toast to the user
-    // Note: This assumes you have toast configured in your app
-    // You might need to import and use your toast library here
-    // toast.error(errorMessage);
   }
 }
 

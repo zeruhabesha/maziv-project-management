@@ -11,11 +11,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:10000', // Local backend server
+        target: 'https://maziv-project-management.onrender.com', // Use production server in development too
         changeOrigin: true,
-        secure: false, // For local development with self-signed certs
+        secure: true,
         ws: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api'), // Keep /api prefix for backend routes
+        timeout: 30000, // 30 second timeout
         configure: (proxy) => {
           proxy.on('error', (err) => {
             console.error('Proxy Error:', err);
@@ -24,7 +24,7 @@ export default defineConfig({
             console.log('API Request:', {
               method: req.method,
               url: req.url,
-              headers: req.headers
+              target: 'https://maziv-project-management.onrender.com'
             });
           });
           proxy.on('proxyRes', (proxyRes: IncomingMessage, req: IncomingMessage) => {

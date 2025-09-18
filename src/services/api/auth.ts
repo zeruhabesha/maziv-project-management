@@ -15,14 +15,12 @@ export const login = async (credentials: { email: string; password: string }) =>
       endpoint,
       baseURL: api.defaults.baseURL,
       environment: import.meta.env.MODE,
-      withCredentials: api.defaults.withCredentials
+      timeout: api.defaults.timeout
     });
   }
   
   try {
-    const response = await api.post(endpoint, credentials, {
-      validateStatus: (status) => status < 500 // Don't throw for 4xx errors
-    });
+    const response = await api.post(endpoint, credentials);
     
     // Log response in development
     if (import.meta.env.DEV) {
@@ -33,21 +31,28 @@ export const login = async (credentials: { email: string; password: string }) =>
       });
     }
     
-    // Handle error responses (4xx)
-    if (response.status >= 400) {
-      const errorMessage = response.data?.message || 'Login failed';
-      const error = new Error(errorMessage);
-      (error as any).response = response;
-      throw error;
-    }
+    // Handle different response formats
+    const token = response.data?.data?.token || response.data?.token;
+    const user = response.data?.data?.user || response.data?.user;
     
-    // Store the token if available
-    if (response.data?.token) {
-      localStorage.setItem('token', response.data.token);
+    if (token) {
+      localStorage.setItem('token', token);
     }
     
     return response.data;
   } catch (error: any) {
+    // Handle timeout errors specifically
+    if (error.isTimeout) {
+      console.error('Auth API: Login timeout');
+      throw new Error('Login request timed out. Please check your connection and try again.');
+    }
+    
+    // Handle network errors
+    if (error.isNetworkError) {
+      console.error('Auth API: Network error during login');
+      throw new Error('Unable to connect to the server. Please check your internet connection.');
+    }
+    
     const errorInfo = {
       message: error?.message || 'Unknown error',
       status: error?.response?.status,

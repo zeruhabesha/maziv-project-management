@@ -51,6 +51,9 @@ const Login: React.FC = () => {
     // Clear any previous errors
     dispatch(clearError());
     
+    // Show loading state immediately
+    console.log('Dispatching login action...');
+    
     // Dispatch the login action
     dispatch(loginStart({
       email: data.email,

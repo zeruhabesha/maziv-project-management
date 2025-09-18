@@ -10,7 +10,7 @@ console.log('API Environment:', {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
   import.meta.env.MODE === 'development' 
-    ? 'http://localhost:10000/api' 
+    ? '/api'  // Use proxy in development
     : 'https://maziv-project-management.onrender.com/api'
 );
 
@@ -23,8 +23,8 @@ export const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
-  timeout: 15000, // 15 seconds
-  withCredentials: true,
+  timeout: 30000, // Increase timeout to 30 seconds
+  withCredentials: false, // Set to false for CORS issues
 });
 
 // Request interceptor for API calls
@@ -42,6 +42,7 @@ api.interceptors.request.use(
       console.group('API Request');
       console.log('Method:', config.method?.toUpperCase());
       console.log('URL:', config.url);
+      console.log('Full URL:', `${config.baseURL}${config.url}`);
       console.log('Headers:', config.headers);
       if (config.data) console.log('Data:', config.data);
       console.groupEnd();
@@ -73,8 +74,18 @@ api.interceptors.response.use(
     // Handle network errors
     if (!error.response) {
       console.error('Network Error:', error.message);
+      
+      // Check if it's a timeout error
+      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+        return Promise.reject({
+          message: 'Request timeout: The server is taking too long to respond. Please try again.',
+          isNetworkError: true,
+          isTimeout: true
+        });
+      }
+      
       return Promise.reject({
-        message: 'Network Error: Unable to connect to the server',
+        message: 'Network Error: Unable to connect to the server. Please check your internet connection.',
         isNetworkError: true
       });
     }
@@ -93,7 +104,9 @@ api.interceptors.response.use(
     if (status === 401) {
       // Auto logout if 401 response returned from API
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     
     // Return a consistent error format
