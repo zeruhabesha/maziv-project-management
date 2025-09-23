@@ -1,4 +1,4 @@
-import api from '../api';
+import { api } from '../../lib/api';
 
 export const getUsers = () => api.get('/users');
 export const createUser = (userData: any) => api.post('/users', userData);

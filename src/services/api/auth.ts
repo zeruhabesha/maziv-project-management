@@ -1,4 +1,4 @@
-import api from '../api';
+import { api } from '../../lib/api';
 
 /**
  * Login a user with email and password

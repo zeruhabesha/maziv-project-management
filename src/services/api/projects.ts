@@ -1,4 +1,4 @@
-import api from '../api'; // This default import now works correctly.
+import { api } from '../../lib/api';
 
 // Get all projects with optional query parameters
 export const getProjects = (params: any) => api.get('/projects', { params });

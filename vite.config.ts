@@ -11,7 +11,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://maziv-project-management.onrender.com', // Use production server in development too
+        target: 'http://localhost:10000', // Use local backend server
         changeOrigin: true,
         secure: true,
         ws: true,

@@ -8,7 +8,7 @@ console.log('API Environment:', {
   isDevelopment: import.meta.env.DEV
 });
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (
+const API_BASE_URL = (
   import.meta.env.MODE === 'development' 
     ? '/api'  // Use proxy in development
     : 'https://maziv-project-management.onrender.com/api'
@@ -24,7 +24,7 @@ export const api = axios.create({
     'Accept': 'application/json',
   },
   timeout: 30000, // Increase timeout to 30 seconds
-  withCredentials: false, // Set to false for CORS issues
+  withCredentials: true, // Set to true to align with backend CORS
 });
 
 // Request interceptor for API calls
