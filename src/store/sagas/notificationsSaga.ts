@@ -1,6 +1,6 @@
 // src/store/sagas/notificationsSaga.ts
 import { call, put, takeLatest } from 'redux-saga/effects';
-import api from '../../services/api';
+import api from '../../lib/api';
 import {
   fetchNotificationsStart,
   fetchNotificationsSuccess,
