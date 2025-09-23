@@ -1,5 +1,5 @@
 import { call, put, takeLatest } from 'redux-saga/effects';
-import { api } from '../../lib/api';
+import api from '../../lib/api';
 import {
   loginStart, loginSuccess, loginFailure,
   getCurrentUserStart, getCurrentUserSuccess, getCurrentUserFailure,

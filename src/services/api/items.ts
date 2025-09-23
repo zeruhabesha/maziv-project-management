@@ -1,4 +1,4 @@
-import { api } from '../../lib/api';
+import api from '../../lib/api';
 
 export const getItems = (params: any) => api.get('/items', { params });
 export const createItem = (itemData: any) => api.post('/items', itemData, { headers: { 'Content-Type': 'multipart/form-data' } });
