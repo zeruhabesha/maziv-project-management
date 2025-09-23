@@ -1,6 +1,6 @@
 // src/store/sagas/alertsSaga.ts
 import { call, put, takeLatest } from 'redux-saga/effects';
-import api from '../../services/api';
+import api from '../../lib/api';
 import { fetchAlertsStart, fetchAlertsSuccess, fetchAlertsFailure } from '../slices/alertsSlice';
 
 function* fetchAlertsWorker(action: ReturnType<typeof fetchAlertsStart>) {
