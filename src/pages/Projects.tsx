@@ -78,7 +78,8 @@ const Projects: React.FC = () => {
 
   const handleProjectDownload = async (projectId: string, filename: string) => {
     try {
-      const res: any = await (await import('../lib/api')).api.get(`/projects/${projectId}/download/${filename}`, { responseType: 'blob' as any });
+      const { default: api } = await import('../lib/api');
+      const res: any = await api.get(`/projects/${projectId}/download/${filename}`, { responseType: 'blob' as any });
       const blob = res.data;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');

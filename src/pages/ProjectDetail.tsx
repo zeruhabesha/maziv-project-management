@@ -9,7 +9,7 @@ import { fetchUsersStart } from '../store/slices/usersSlice';
 import toast from 'react-hot-toast';
 import EditProjectModal from '../components/Modals/EditProjectModal';
 import CreateEditItemModal from '../components/Modals/CreateEditItemModal';
-import { api } from '../lib/api';
+import api from '../lib/api';
 
 // Helper to format currency
 const formatCurrency = (amount: number | string | undefined) => {
@@ -317,12 +317,8 @@ const FinancialsTab = ({ tenderValue, totalCost }: { tenderValue: number; totalC
 
 const handleDownload = async (itemId: string, filename: string) => {
   try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`/api/items/${itemId}/download/${filename}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    if (!response.ok) throw new Error('Download failed');
-    const blob = await response.blob();
+    const res: any = await api.get(`/items/${itemId}/download/${filename}`, { responseType: 'blob' as any });
+    const blob = res.data;
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename; a.click();
