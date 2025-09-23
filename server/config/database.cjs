@@ -165,31 +165,15 @@ function resolveDbConfig() {
 
 let sequelize;
 
-function buildSequelize() {
-  console.log('[DB] Using direct database configuration');
-  
-  // Direct database configuration
-  const dbConfig = {
-    database: 'maziv_project',
-    username: 'maziv_user',
-    password: 'Y0x1lLB1r8AI8oLmOQ009R3ej0eVY4I7',
-    host: 'dpg-d2neh77diees73cicfl0-a.oregon-postgres.render.com',
-    port: 5432,
-    dialect: 'postgres',
-    dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false
-      }
-    },
-    pool: {
-      max: 10,
-      min: 0,
-      acquire: 30000,
-      idle: 10000
-    },
-    logging: process.env.NODE_ENV === 'development' ? console.log : false
-  };
+function getOrCreateSequelize() {
+  if (sequelize) {
+    return sequelize;
+  }
+
+  const dbConfig = resolveDbConfig();
+  if (!dbConfig) {
+    throw new Error("No database configuration found. Please check your environment variables or config files.");
+  }
 
   console.log('Database config:', {
     database: dbConfig.database,
@@ -198,29 +182,47 @@ function buildSequelize() {
     username: dbConfig.username ? '***' : undefined,
     dialect: dbConfig.dialect,
     ssl: dbConfig.dialectOptions?.ssl || false,
-    pool: dbConfig.pool
+    pool: dbConfig.pool || {}
   });
 
-  sequelize = new Sequelize(
-    dbConfig.database,
-    dbConfig.username,
-    dbConfig.password,
-    {
-      host: dbConfig.host,
-      port: dbConfig.port,
+  if (dbConfig.url) {
+    sequelize = new Sequelize(dbConfig.url, {
       dialect: dbConfig.dialect,
       dialectOptions: dbConfig.dialectOptions,
       logging: dbConfig.logging,
-      pool: dbConfig.pool
-    }
-  );
+      pool: dbConfig.pool || {
+        max: 10,
+        min: 0,
+        acquire: 30000,
+        idle: 10000
+      }
+    });
+  } else {
+    sequelize = new Sequelize(
+      dbConfig.database,
+      dbConfig.username,
+      dbConfig.password,
+      {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        dialect: dbConfig.dialect,
+        dialectOptions: dbConfig.dialectOptions,
+        logging: dbConfig.logging,
+        pool: dbConfig.pool || {
+          max: 10,
+          min: 0,
+          acquire: 30000,
+          idle: 10000
+        }
+      }
+    );
+  }
   
   return sequelize;
 }
 
-if (!sequelize) {
-  buildSequelize();
-}
+// Initialize sequelize instance
+getOrCreateSequelize();
 
 // ---- Public API --------------------------------------------------------------
 
@@ -275,11 +277,13 @@ async function initializeDatabase(options = {}) {
 }
 
 async function getSequelize() {
-  return sequelize;
+  return getOrCreateSequelize();
 }
 
 module.exports = {
-  sequelize,
+  get sequelize() {
+    return getOrCreateSequelize();
+  },
   initializeDatabase,
   getSequelize,
 };

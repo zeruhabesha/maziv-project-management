@@ -1,23 +1,9 @@
 // server/models/index.cjs
 const fs = require('fs');
 const path = require('path');
-const { Sequelize, DataTypes } = require('sequelize');
+const { DataTypes } = require('sequelize');
+const { sequelize } = require('../config/database.cjs');
 const basename = path.basename(__filename);
-
-const env = process.env.NODE_ENV || 'development';
-const config = require('../config/config.json')[env];
-
-// Create Sequelize instance (Postgres on Render needs SSL in prod – covered in config.json)
-const sequelize = new Sequelize(
-  config.database, config.username, config.password, {
-    ...config,
-    define: {
-      // Allow models to set their own tableName, but keep identifiers quoted for CamelCase
-      quoteIdentifiers: true,
-    },
-    logging: false,
-  }
-);
 
 const db = {};
 fs.readdirSync(__dirname)
@@ -40,6 +26,6 @@ Object.keys(db).forEach(name => {
 });
 
 db.sequelize = sequelize;
-db.Sequelize = Sequelize;
+db.Sequelize = require('sequelize').Sequelize;
 
 module.exports = db;
