@@ -5,7 +5,7 @@ import { X, FolderOpen, Calendar, DollarSign, User, FileText } from 'lucide-reac
 import { useAppDispatch } from '../../hooks/redux';
 import { createProjectStart } from '../../store/slices/projectsSlice';
 import toast from 'react-hot-toast';
-import { api } from '../../lib/api';
+import api from '../../lib/api';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
