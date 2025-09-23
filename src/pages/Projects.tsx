@@ -78,12 +78,8 @@ const Projects: React.FC = () => {
 
   const handleProjectDownload = async (projectId: string, filename: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/projects/${projectId}/download/${filename}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
+      const res: any = await (await import('../lib/api')).api.get(`/projects/${projectId}/download/${filename}`, { responseType: 'blob' as any });
+      const blob = res.data;
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = filename; a.click();

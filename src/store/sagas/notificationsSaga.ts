@@ -13,8 +13,9 @@ import {
 function* fetchNotificationsWorker(action: ReturnType<typeof fetchNotificationsStart>) {
   try {
     const { userId } = action.payload;
-    const { data } = yield call(api.get, `/users/${userId}/notifications`);
-    yield put(fetchNotificationsSuccess(data || []));
+    const response = yield call(api.get, `/users/${userId}/notifications`);
+    const list = (response as any)?.data?.data || [];
+    yield put(fetchNotificationsSuccess(list));
   } catch (err: any) {
     yield put(fetchNotificationsFailure(err?.response?.data?.message || 'Failed to fetch notifications'));
   }
@@ -23,7 +24,8 @@ function* fetchNotificationsWorker(action: ReturnType<typeof fetchNotificationsS
 function* markNotificationReadWorker(action: ReturnType<typeof markNotificationReadStart>) {
   try {
     const { id } = action.payload;
-    yield call(api.patch, `/notifications/${id}/read`); // backend should flip is_read=true
+    // Backend route: POST /api/users/notifications/:notificationId/read
+    yield call(api.post, `/users/notifications/${id}/read`);
     yield put(markNotificationReadSuccess({ id }));
   } catch (err: any) {
     yield put(markNotificationReadFailure(err?.response?.data?.message || 'Failed to mark notification read'));

@@ -9,7 +9,7 @@ import { fetchUsersStart } from '../store/slices/usersSlice';
 import toast from 'react-hot-toast';
 import EditProjectModal from '../components/Modals/EditProjectModal';
 import CreateEditItemModal from '../components/Modals/CreateEditItemModal';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 // Helper to format currency
 const formatCurrency = (amount: number | string | undefined) => {
@@ -87,12 +87,8 @@ const ProjectDetail: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('file', projectFile);
-      const token = localStorage.getItem('token');
-      await axios.post(`/api/projects/${currentProject.id}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
-        },
+      await api.post(`/projects/${currentProject.id}/upload`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
       toast.success('Project file uploaded');
       dispatch(fetchProjectStart(currentProject.id)); // Refresh
@@ -107,12 +103,8 @@ const ProjectDetail: React.FC = () => {
   const handleProjectFileDownload = async () => {
     if (!currentProject?.file) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`/api/projects/${currentProject.id}/download/${currentProject.file}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!response.ok) throw new Error('Download failed');
-      const blob = await response.blob();
+      const response: any = await api.get(`/projects/${currentProject.id}/download/${currentProject.file}`, { responseType: 'blob' as any });
+      const blob = response.data;
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url; a.download = currentProject.file; a.click();

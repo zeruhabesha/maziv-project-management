@@ -5,7 +5,7 @@ import { X, FolderOpen, Calendar, DollarSign, User, FileText } from 'lucide-reac
 import { useAppDispatch } from '../../hooks/redux';
 import { createProjectStart } from '../../store/slices/projectsSlice';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+import { api } from '../../lib/api';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
@@ -51,11 +51,9 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
     if (file) formData.append('file', file);
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/api/projects', formData, {
+      const response = await api.post('/projects', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          Authorization: `Bearer ${token}`,
         },
       });
       toast.success('Project created successfully');
