@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node app.js",
-    "dev": "cross-env NODE_ENV=development nodemon app.js",
+    "dev": "cross-env NODE_ENV=development nodemon --experimental-modules --es-module-specifier-resolution=node app.js",
     "migrate": "npx sequelize-cli db:migrate",
     "render-start": "npm run migrate && node app.js",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
