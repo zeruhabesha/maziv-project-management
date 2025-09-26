@@ -13,7 +13,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:10000', // Use local backend server
         changeOrigin: true,
-        secure: true,
+        secure: false,
         ws: true,
         timeout: 30000, // 30 second timeout
         configure: (proxy) => {
