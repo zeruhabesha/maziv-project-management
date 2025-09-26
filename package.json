@@ -13,6 +13,7 @@
     "dev": "concurrently \"cd server && npm run dev\" \"npm run client\"",
     "client": "vite",
     "build": "vite build",
+    "vercel-build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "start": "cd server && npm start",
