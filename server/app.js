@@ -7,7 +7,9 @@ import helmet from 'helmet';
 import compression from 'compression';
 import path from 'node:path';
 
-import { initializeDatabase } from './config/database.cjs'; // still CJS, works fine in ESM
+import databaseModule from './config/database.cjs';
+const { initializeDatabase } = databaseModule;
+
 
 // Routers (all ESM)
 import authRouter from './routes/auth.js';
@@ -155,13 +157,14 @@ import errorHandler from './middleware/errorHandler.js';
       try {
         // Try to check database if possible
         try {
-          const models = await import('./models/index.cjs');
+const modelsModule = await import('./models/index.cjs');
+const models = modelsModule.default;
           if (models.sequelize) {
             await models.sequelize.authenticate();
             healthCheck.database.status = 'connected';
             healthCheck.services.database = true;
             healthCheck.database.error = null;
-            
+
             // Try to get user count if possible
             try {
               const userCount = await models.User.count();

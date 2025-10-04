@@ -15,6 +15,9 @@ RUN cd server && npm install
 # Copy application code
 COPY . .
 
+# Copy environment files
+COPY server/.env.production /app/server/.env
+
 # Set environment variables
 ENV NODE_ENV=production
 ENV PORT=10000
