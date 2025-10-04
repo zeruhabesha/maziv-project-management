@@ -31,13 +31,14 @@ const authSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
-      state.loading = false;
-      state.user = action.payload.user;
-      state.token = action.payload.token;
-      state.isAuthenticated = true;
-      state.error = null;
-    },
+  loginSuccess: (state, action: PayloadAction<{ user: User; token: string }>) => {
+  state.loading = false;
+  state.user = action.payload.user;
+  state.token = action.payload.token;
+  state.isAuthenticated = true;
+  state.error = null;
+  localStorage.setItem('token', action.payload.token); // <-- persist token
+},
     loginFailure: (state, action: PayloadAction<string>) => {
       state.loading = false;
       state.error = action.payload;
@@ -74,12 +75,13 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
     },
-    logout: (state) => {
-      state.user = null;
-      state.token = null;
-      state.isAuthenticated = false;
-      state.error = null;
-    },
+   logout: (state) => {
+  state.user = null;
+  state.token = null;
+  state.isAuthenticated = false;
+  state.error = null;
+  localStorage.removeItem('token'); // <-- remove token
+},
     clearError: (state) => {
       state.error = null;
     },
