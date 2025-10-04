@@ -68,8 +68,8 @@ const Projects: React.FC = () => {
     }
   };
 
-  const isAdmin = currentUser?.role === 'admin';
-  const canCreateOrEdit = isAdmin || currentUser?.role === 'manager';
+const isAdminOrManager = currentUser?.role === 'admin' || currentUser?.role === 'manager';
+  const canCreateOrEdit = isAdminOrManager || currentUser?.role === 'manager';
 
   const handleAssignUser = (project: any) => {
     setAssignProject(project);
@@ -166,7 +166,7 @@ const Projects: React.FC = () => {
                           <Edit className="h-4 w-4" />
                         </button>
                       )}
-                      {isAdmin && (
+                      {isAdminOrManager && (
                         <button onClick={() => handleDeleteProject(project.id, project.name)} className="p-2 text-gray-400 hover:text-red-600 rounded-lg" title="Delete">
                           <Trash2 className="h-4 w-4" />
                         </button>

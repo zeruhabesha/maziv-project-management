@@ -216,8 +216,8 @@ const models = modelsModule.default;
     app.use(errorHandler);
 
     // 5) Start server
-    const PORT = process.env.PORT || 10000;
-    app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
   } catch (err) {
     console.error('❌ Boot error:', err);
     process.exit(1);

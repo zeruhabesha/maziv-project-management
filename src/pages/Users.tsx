@@ -45,17 +45,17 @@ const Users: React.FC = () => {
   };
   
   // Check if current user is an admin
-  const isAdmin = currentUser?.role === 'admin';
+const isAdminOrManager = currentUser?.role === 'admin' || currentUser?.role === 'manager';
 
-  if (!isAdmin) {
-    return (
-      <div className="text-center py-12">
-        <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium">Access Denied</h3>
-        <p className="text-gray-600">You do not have permission to view this page.</p>
-      </div>
-    );
-  }
+if (!isAdminOrManager) {
+  return (
+    <div className="text-center py-12">
+      <Shield className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+      <h3 className="text-lg font-medium">Access Denied</h3>
+      <p className="text-gray-600">You do not have permission to view this page.</p>
+    </div>
+  );
+}
 
   const getRoleIcon = (role: string) => {
     const icons = { admin: Crown, manager: Shield, user: User };
