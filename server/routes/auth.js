@@ -48,6 +48,11 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+router.post('/logout', (req, res) => {
+  // For JWT, logout is handled client-side (remove token).
+  // Optionally, you can blacklist the token here if needed.
+  res.status(200).json({ success: true, message: 'Logged out' });
+});
 
 // Me
 router.get("/me", async (req, res) => {
