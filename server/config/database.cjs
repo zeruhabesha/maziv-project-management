@@ -93,49 +93,15 @@ function buildConfigFromDiscreteEnv() {
 
 // Resolve final DB config
 function resolveDbConfig() {
-  // 1) First try config.json / config.cjs (with development/test/production keys)
-  const fileCfg = findConfigObject();
-  if (fileCfg && fileCfg[ENV]) {
-    console.log(`[DB] Using config for NODE_ENV="${ENV}" from file`);
-    const picked = fileCfg[ENV];
-
-    return {
-      database: picked.database,
-      username: picked.username,
-      password: picked.password,
-      host: picked.host,
-      port: picked.port,
-      dialect: picked.dialect || "postgres",
-      dialectOptions: picked.dialectOptions || {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
-      },
-      logging: process.env.DB_LOGGING === 'true',
-      pool: picked.pool || {
-        max: 10,
-        min: 0,
-        acquire: 30000,
-        idle: 10000
-      }
-    };
-  }
-
-  // 2) DATABASE_URL (Render/Heroku)
+  // 1) Prefer DATABASE_URL (Render/Heroku style)
   if (process.env.DATABASE_URL) {
     const sslOn =
       (process.env.PGSSL || "").toLowerCase() === "true" ||
       (process.env.DATABASE_SSL || "").toLowerCase() === "true" ||
-      ENV === "production";
+      (process.env.NODE_ENV || "development") === "production";
 
     const dialectOptions = sslOn
-      ? {
-          ssl: {
-            require: true,
-            rejectUnauthorized: false
-          }
-        }
+      ? { ssl: { require: true, rejectUnauthorized: false } }
       : undefined;
 
     console.log("[DB] Using DATABASE_URL");
@@ -144,34 +110,46 @@ function resolveDbConfig() {
       dialect: "postgres",
       dialectOptions,
       logging: process.env.DB_LOGGING === 'true',
-      pool: {
-        max: 10,
-        min: 2,
-        acquire: 60000,
-        idle: 10000,
-        evict: 10000
-      }
+      pool: { max: 10, min: 2, acquire: 60000, idle: 10000, evict: 10000 }
     };
   }
 
-  // 3) Fall back to discrete env variables (DB_HOST, DB_USER, ...)
+  // 2) Next use discrete env vars
   const envCfg = buildConfigFromDiscreteEnv();
   if (envCfg) {
     console.log("[DB] Using discrete DB_* environment variables");
     return {
       ...envCfg,
       dialectOptions: envCfg.dialectOptions || {
-        ssl: {
-          require: true,
-          rejectUnauthorized: false
-        }
+        ssl: { require: true, rejectUnauthorized: false }
       },
       logging: process.env.DB_LOGGING === 'true',
     };
   }
 
+  // 3) Finally fall back to config files (dev convenience)
+  const fileCfg = findConfigObject();
+  if (fileCfg && fileCfg[ENV]) {
+    console.log(`[DB] Using config for NODE_ENV="${ENV}" from file`);
+    const picked = fileCfg[ENV];
+    return {
+      database: picked.database,
+      username: picked.username,
+      password: picked.password,
+      host: picked.host,
+      port: picked.port,
+      dialect: picked.dialect || "postgres",
+      dialectOptions: picked.dialectOptions || {
+        ssl: { require: true, rejectUnauthorized: false }
+      },
+      logging: process.env.DB_LOGGING === 'true',
+      pool: picked.pool || { max: 10, min: 0, acquire: 30000, idle: 10000 }
+    };
+  }
+
   return null;
 }
+
 
 // ---- Sequelize Singleton -----------------------------------------------------
 
