@@ -130,7 +130,12 @@ function resolveDbConfig() {
       ENV === "production";
 
     const dialectOptions = sslOn
-      ? { ssl: { require: true, rejectUnauthorized: false } }
+      ? {
+          ssl: {
+            require: true,
+            rejectUnauthorized: false
+          }
+        }
       : undefined;
 
     console.log("[DB] Using DATABASE_URL");
@@ -139,6 +144,13 @@ function resolveDbConfig() {
       dialect: "postgres",
       dialectOptions,
       logging: process.env.DB_LOGGING === 'true',
+      pool: {
+        max: 10,
+        min: 2,
+        acquire: 60000,
+        idle: 10000,
+        evict: 10000
+      }
     };
   }
 
@@ -176,13 +188,14 @@ function getOrCreateSequelize() {
   }
 
   console.log('Database config:', {
-    database: dbConfig.database,
-    host: dbConfig.host,
-    port: dbConfig.port,
+    database: dbConfig.database || 'N/A',
+    host: dbConfig.host || 'N/A',
+    port: dbConfig.port || 'N/A',
     username: dbConfig.username ? '***' : undefined,
-    dialect: dbConfig.dialect,
-    ssl: dbConfig.dialectOptions?.ssl || false,
-    pool: dbConfig.pool || {}
+    dialect: dbConfig.dialect || 'postgres',
+    ssl: dbConfig.dialectOptions?.ssl ? 'enabled' : 'disabled',
+    pool: dbConfig.pool || {},
+    url: dbConfig.url ? '***' : undefined
   });
 
   if (dbConfig.url) {
@@ -235,14 +248,15 @@ async function initializeDatabase(options = {}) {
     
     // Log database configuration (without sensitive data)
     const config = sequelize.config;
+    const options = sequelize.options;
     console.log("Database config:", {
       database: config.database,
       host: config.host,
       port: config.port,
       username: config.username ? '***' : undefined,
-      dialect: config.dialect,
-      ssl: config.dialectOptions?.ssl || false,
-      pool: config.pool || {}
+      dialect: options.dialect || 'postgres',
+      ssl: options.dialectOptions?.ssl ? 'enabled' : 'disabled',
+      pool: options.pool || {}
     });
 
     // Test connection
