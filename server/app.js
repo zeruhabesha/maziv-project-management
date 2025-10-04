@@ -60,13 +60,19 @@ import errorHandler from './middleware/errorHandler.js';
     }
 
     // Enhanced CORS configuration
-    const allowedOrigins = [
-      'http://localhost:5173',
-      'http://localhost:3000',
-      'https://maziv-project-management.vercel.app',
-      'https://maziv-project-management.vercel.app/'
-    ];
+    // const allowedOrigins = [
+    //   'http://localhost:5173',
+    //   'http://localhost:3000',
+    //   'https://maziv-project-management.vercel.app',
+    //   'https://maziv-project-management.vercel.app/'
+    // ];
+// Replace the allowedOrigins definition with:
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim())
+  .filter(Boolean);
 
+// ...rest of your code remains the same
     // Add request logging middleware
     app.use((req, res, next) => {
       console.log('=== Incoming Request ===');
@@ -80,20 +86,21 @@ import errorHandler from './middleware/errorHandler.js';
 
     // Configure CORS with dynamic origin check
     app.use(cors({
-      origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
+        origin: allowedOrigins,
+  credentials: true,
+      // origin: function (origin, callback) {
+      //   // Allow requests with no origin (like mobile apps or curl requests)
+      //   if (!origin) return callback(null, true);
         
-        // Check if the origin is allowed
-        if (allowedOrigins.includes(origin) || 
-            allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/+$/, '')))) {
-          return callback(null, true);
-        }
+      //   // Check if the origin is allowed
+      //   if (allowedOrigins.includes(origin) || 
+      //       allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/+$/, '')))) {
+      //     return callback(null, true);
+      //   }
         
-        console.log('Blocked by CORS:', origin);
-        return callback(new Error('Not allowed by CORS'));
-      },
-      credentials: true,
+      //   console.log('Blocked by CORS:', origin);
+      //   return callback(new Error('Not allowed by CORS'));
+      // },
       exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: [
