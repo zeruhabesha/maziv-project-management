@@ -8,6 +8,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  base: '/',
   server: {
     proxy: {
       '/api': {
@@ -46,5 +47,7 @@ export default defineConfig({
   define: {
     // Ensure environment variables are available at build time
     'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL)
+ 
   }
+  
 });
