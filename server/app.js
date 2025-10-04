@@ -10,6 +10,7 @@ import path from 'node:path';
 import databaseModule from './config/database.cjs';
 const { initializeDatabase } = databaseModule;
 
+
 // Routers (all ESM)
 import authRouter from './routes/auth.js';
 import usersRouter from './routes/users.js';
