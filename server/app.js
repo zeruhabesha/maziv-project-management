@@ -157,8 +157,9 @@ import errorHandler from './middleware/errorHandler.js';
       try {
         // Try to check database if possible
         try {
-          const modelsModule = await import('./models/index.cjs');
-          const models = modelsModule.default;
+const modelsModule = await import('./models/index.cjs');
+const models = modelsModule.default;
+;
           if (models.sequelize) {
             await models.sequelize.authenticate();
             healthCheck.database.status = 'connected';
